@@ -7,28 +7,25 @@ file_path <- here("test.csv")
 data <- read_csv(file_path, col_names = TRUE)
 
 
-gps <-
+data <- 
   data %>%
-  filter(task == "GPS") %>%
-  mutate(delay = abs(exec_timestamp - planning_timestamp),
-         step = n() - row_number())
+  mutate(exec_date = as_datetime(exec_timestamp/1000),
+         plan_date = as_datetime(planning_timestamp/1000))
 
-
-dummy <-
+all <-
   data %>%
-  filter(task == "dummy") %>%
-  mutate(delay = abs(exec_timestamp - planning_timestamp),
-         step = n() - row_number())
+  group_by(task) %>%
+  arrange(plan_date) %>%
+  mutate(step = row_number(),
+         delay = interval(plan_date, exec_date))
 
 
-all <- bind_rows(gps, dummy) %>% arrange(step)
-
-
-p_all <- all %>%
+p_all <- 
+  filter(all, delay >= 60) %>%
   ggplot(aes(x = step, y=delay, group=task, colour = factor(task))) +
   geom_line() +
   labs(x = "time", y = "delay") + 
   theme_bw()
   
 p_all
-  
+
