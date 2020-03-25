@@ -43,7 +43,7 @@ manipulate(
   filter(data_formatted, task == task_selected) %>%
   ggplot(aes(x = step, y=delay)) +
     geom_line(alpha = 0.6, size = 0.5) +
-    labs(x = "time step", y = "delay [seconds]") + 
+    labs(x = "time steps", y = "delay [seconds]") + 
     scale_x_continuous(breaks=xbks, limits=xlim) +
     scale_y_continuous(breaks=ybks, limits=ylim) +
     theme_bw(),
