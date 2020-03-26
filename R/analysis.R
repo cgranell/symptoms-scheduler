@@ -18,7 +18,6 @@ time_start <- min(data$plan_date)
 time_end <- max(data$plan_date)
 time_elapsed <- interval(time_end,time_start)
 as.duration(time_elapsed) / dminutes(1) # dhours(1), ddays(1)
-as.duration(time_elapsed) / ddays(1)
 
 
 baseline_delay <- 60
