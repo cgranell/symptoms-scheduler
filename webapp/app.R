@@ -10,8 +10,7 @@
 library(shiny)
 library(here)
 library(lubridate)
-library(readr)
-library(dplyr)
+library(tidyverse)
 
 file_path <- here::here("data", "Dummy1minA1_30-03-2020T12h23.csv")
 
