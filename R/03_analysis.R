@@ -3,14 +3,10 @@ library(tidyverse)
 library(lubridate)
 library(manipulate)
 
-file_path <- here::here("data-raw", "PreExperiment_26-03-2020T15h49.csv")
+
+file_path <- here::here("data", "Dummy1minA1_30-03-2020T12h23.csv")
 
 data <- read_csv(file_path, col_names = TRUE)
-
-data <- 
-  data %>%
-  mutate(exec_date = as_datetime(exec_timestamp/1000),
-         plan_date = as_datetime(planning_timestamp/1000))
 
 # plan_date is the driver field to interpet the date. The same date is twice
 
@@ -20,21 +16,14 @@ time_elapsed <- interval(time_start, time_end)
 duration <- round(as.duration(time_elapsed) / dhours(1), 2) # dhours(1), ddays(1)
 
 
-baseline_delay <- 60
+# get rid of outlier
+n_records <- max(data_formatted$step)
+n_outliers <- nrow(filter(data, outlier == "yes"))
 
-# Delay time is in seconds
-data_formatted <-
-  data %>%
-  group_by(task) %>%
-  arrange(plan_date) %>%
-  mutate(step = row_number(),
-         delay = as.duration(interval(plan_date, exec_date)) - baseline_delay)
-
-
-data_formatted <- filter(data_formatted, delay <= 10)
+cat(paste0("outliers: ", round(n_outliers / n_records, 2), "%"))
 
 ylim_delay <- c(min(data_formatted$delay), max(data_formatted$delay))
-ybks_delay <- seq(ylim_delay[1], ylim_delay[2], 0.05)
+ybks_delay <- seq(ylim_delay[1], ylim_delay[2], 5)
 xlim <- c(min(data_formatted$step), max(data_formatted$step))
 xbks <- seq(xlim[1], xlim[2], 100)
 
@@ -52,7 +41,8 @@ ggplot(data_formatted, aes(x = step)) +
   geom_line(aes(y = battery * scalefactor), color="red") +
   # geom_smooth(aes(y=delay), method = "lm") +
   geom_smooth(aes(y=delay), method="loess") +
-  labs(title=paste0("Start: ", time_start, " - End: ", time_end),
+  labs(title="Advanced - 1A (Dummy1minA1_30-03-2020T12h23.csv)",
+       subtitle=paste0("Start: ", time_start, " - End: ", time_end),
        x = "time steps [minutes]") + 
   scale_x_continuous(breaks=xbks, limits=xlim) +
   scale_y_continuous(name="delay [seconds]", breaks=ybks_delay, limits=ylim_delay, 
@@ -67,18 +57,19 @@ ggplot(data_formatted, aes(x = step)) +
     # axis.text.y.left=element_text(color="blue"),
   )
 
+plot_path <- here::here("figs", "advanced-1A.png")
+ggsave(filename = plot_path, width = 18, height = 16, units = "cm")
 
-
-manipulate(
-  filter(data_formatted, task == task_selected) %>%
-  ggplot(aes(x = step, y=delay)) +
-    geom_line(alpha = 0.6, size = 0.5) +
-    labs(x = "time steps", y = "delay [seconds]") + 
-    scale_x_continuous(breaks=xbks, limits=xlim) +
-    scale_y_continuous(breaks=ybks, limits=ylim) +
-    theme_bw(),
-  task_selected = picker("GPS", "dummy", label="Type of task") 
-  )
-  
-p
+# 
+# manipulate(
+#   filter(data_formatted, task == task_selected) %>%
+#   ggplot(aes(x = step, y=delay)) +
+#     geom_line(alpha = 0.6, size = 0.5) +
+#     labs(x = "time steps", y = "delay [seconds]") + 
+#     scale_x_continuous(breaks=xbks, limits=xlim) +
+#     scale_y_continuous(breaks=ybks, limits=ylim) +
+#     theme_bw(),
+#   outlier_flag = picker("yes", "no", label="Outlier") 
+#   )
+#   
 
