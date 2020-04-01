@@ -6,8 +6,8 @@ library(lubridate)
 library(stringr)
 
 
-schedulers <- c("AV" = "advanced", 
-                "BA" = "basic")
+schedulers <- c("AD" = "Advanced", 
+                "BA" = "Basic")
 
 devices <- c("BQ" = "BQ Aquaris V",
              "NV" = "Nvidia Shield Tablet",
@@ -26,20 +26,21 @@ data_merged <- data.frame()
 
 for (f in 1:length(file_names)) {
   filename <- stringr::str_sub(file_names[f], 1, 8)
-
+  
   parts <- stringr::str_split(filename, "_", simplify = TRUE)
   
-  scheduler_type <- parts[1]
+  scheduler_id = parts[1]
+  scheduler_name <- schedulers[[scheduler_id]]
   day_exp <- as.integer(parts[2])
   device_id <- parts[3]
-
   device_name <- devices[[device_id]]
+  
   data_temp <- read_csv(file_paths[f], col_names = TRUE)
 
 
   data_temp <- 
     data_temp %>%
-    mutate(scheduler = scheduler_type,
+    mutate(scheduler = scheduler_name,
            device_id = device_id,
            device_name = device_name,
            day = day_exp) 
@@ -67,10 +68,10 @@ data_merged <-
 means <- 
   data_merged %>%
   group_by(device_id) %>%
-  summarise(mean = mean(delay),
-            sd = sd(delay),
-            lo = mean - 2*sd,
-            hi = mean + 2*sd)
+  summarise(mean = round(mean(delay), 3),
+            sd = round(sd(delay), 3),
+            lo = round(mean - 2*sd, 3),
+            hi = round(mean + 2*sd, 3))
 
 data_complete <- 
   left_join(data_merged, means, by="device_id") %>%

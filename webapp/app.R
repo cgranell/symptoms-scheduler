@@ -12,12 +12,15 @@ library(here)
 library(lubridate)
 library(tidyverse)
 
-file_path <- here::here("data", "Dummy1minA1_30-03-2020T12h23.csv")
+file_path <- here::here("data", "data.csv")
 
-data_advance <- read_csv(file_path, col_names = TRUE)
+data <- read_csv(file_path, col_names = TRUE)
 
-# devices <- unique(data_advance$device) 
-# schedulers <- unique(data_advance$scheduler)
+devices_lbl <- c("Advanced - BQ Aquaris V" = "BQ",
+                 "Advanced - Nvidia Shield Tablet" = "NV",
+                 "Advanced - Xiaomi Mi A1" = "A1",
+                 "Basic - Honor 9" = "H9",
+                 "Basic - Motorola Moto G" = "MO")
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -26,15 +29,11 @@ ui <- fluidPage(
     
     sidebarLayout(
         sidebarPanel(
-            selectInput("id_scheduler", 
-                        label = "Scheduler:", 
-                        choices = c(#"Basic/naive scheduler" = "basic",
-                                    "Advanced/enhanced scheduler" = "advanced")),
-            
         
             selectInput("id_device", 
                         label = "Devices:", 
-                        choices = c("A1" = "A1")),
+                        choices = devices_lbl),
+            
             
             checkboxInput("id_outlier", 
                            label = "Show outliers", 
@@ -54,25 +53,27 @@ server <- function(input, output) {
     selection <- reactive({
         
         if (input$id_outlier) {
-            data_advance %>%
-                filter(device == input$id_device)
+            data %>%
+                filter(device_id == input$id_device)
             
         } else {
-            data_advance %>%
-                filter(device == input$id_device,
+            data %>%
+                filter(device_id == input$id_device,
                        outlier == "no")
         }
     })
         
-# 
-
-#     
     output$id_plot <- renderPlot({
+        title <- paste0(unique(selection()$scheduler),
+                       " - ",
+                        unique(selection()$device_name))
+        
+        
         time_start <- min(selection()$plan_date)
         time_end <- max(selection()$plan_date)
         
         ylim_delay <- c(min(selection()$delay), max(selection()$delay))
-        ybks_delay <- seq(ylim_delay[1], ylim_delay[2], 5)
+        ybks_delay <- round(seq(ylim_delay[1], ylim_delay[2], (ylim_delay[2] - ylim_delay[1])/ 10),3)
         xlim <- c(min(selection()$step), max(selection()$step))
         xbks <- seq(xlim[1], xlim[2], 100)
         
@@ -87,7 +88,7 @@ server <- function(input, output) {
             geom_line(aes(y = battery * scalefactor), color="red") +
             # geom_smooth(aes(y=delay), method = "lm") +
             geom_smooth(aes(y=delay), method="loess") +
-            labs(title="Advanced - 1A (Dummy1minA1_30-03-2020T12h23.csv)",
+            labs(title=title,
                  subtitle=paste0("Start: ", time_start, " - End: ", time_end),
                  x = "time steps [minutes]") + 
             scale_x_continuous(breaks=xbks, limits=xlim) +
