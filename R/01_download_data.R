@@ -8,11 +8,7 @@ library(readxl)
 #TODO: to retrieve list of csv files from same folder.
 #TODO: to propose naming convention
 
-devices <- c("BQ" = "BQ Aquaris V",
-             "NV" = "Nvidia Shield Tablet",
-             "A1" = "Xiaomi Mi A1")
-             # "H9" = "Honor 9",
-             # "MO" = "Motorola Moto G")
+
 
 files <- c("BQ" = "AD_01_BQ.csv",
                "NV" = "AD_01_NV.csv",
