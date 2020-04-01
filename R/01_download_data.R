@@ -6,11 +6,11 @@ library(googledrive)
 library(readxl)
 
 #TODO: to propose naming convention
-files <- c("BQ" = "AD_01_BQ.csv",
-           "NV" = "AD_01_NV.csv",
-           "A1" = "AD_01_A1.csv",
-           "H9" = "BA_01_H9.csv",
-           "MO" = "BA_01_MO.csv")
+files <- c("BQ" = "AD_BQ.csv",
+           "NV" = "AD_NV.csv",
+           "A1" = "AD_A1.csv",
+           "H9" = "BA_H9.csv",
+           "MO" = "BA_MO.csv")
 
 gfolder_url <- "https://drive.google.com/open?id=11oqV_vZqRDkbMdQ8m2KmAeL3-mOPKClh"
 gdata_path <- drive_get(as_id(gfolder_url))

@@ -22,6 +22,10 @@ devices_lbl <- c("Advanced - BQ Aquaris V" = "BQ",
                  "Basic - Honor 9" = "H9",
                  "Basic - Motorola Moto G" = "MO")
 
+min_date = as_date(min(data$plan_date))
+max_date = as_date(max(data$plan_date))
+
+
 # Define UI for application that draws a histogram
 ui <- fluidPage(
 
@@ -30,14 +34,32 @@ ui <- fluidPage(
     sidebarLayout(
         sidebarPanel(
         
-            selectInput("id_device", 
+            selectInput("selected_device", 
                         label = "Devices:", 
                         choices = devices_lbl),
             
             
-            checkboxInput("id_outlier", 
+            checkboxInput("selected_outlier", 
                            label = "Show outliers", 
                            FALSE)
+            
+            # dateRangeInput("selected_dates", 
+            #                "Date range:",
+            #                start  = min_date,
+            #                end    = max_date,
+            #                min    = min_date,
+            #                max    = max_date,
+            #                format = "dd/mm/yy",
+            #                separator = " - ")
+            
+            # sliderInput("selected_dates",
+            #             "Dates:",
+            #             min = min_date,
+            #             max = max_date,
+            #             # step = 1,  
+            #             # sep = "",
+            #             value = min_date,
+            #             timeFormat="%Y-%m-%d")
         ),
         
         mainPanel(
@@ -51,15 +73,19 @@ server <- function(input, output) {
     
     # Filter data series to current selection
     selection <- reactive({
+        # selected_interval <- interval(input$selected_dates[1], input$selected_dates[2])
         
-        if (input$id_outlier) {
+        if (input$selected_outlier) {
             data %>%
-                filter(device_id == input$id_device)
+                filter(device_id == input$selected_device)
+                       # plan_date %within% selected_interval)
             
         } else {
             data %>%
-                filter(device_id == input$id_device,
+                filter(device_id == input$selected_device,
                        outlier == "no")
+                       # plan_date %within% selected_interval)
+            
         }
     })
         
@@ -68,14 +94,16 @@ server <- function(input, output) {
                        " - ",
                         unique(selection()$device_name))
         
-        
         time_start <- min(selection()$plan_date)
         time_end <- max(selection()$plan_date)
         
         ylim_delay <- c(min(selection()$delay), max(selection()$delay))
+        ystep <- ceiling((ylim_delay[2] - ylim_delay[1]) / 10) 
         ybks_delay <- round(seq(ylim_delay[1], ylim_delay[2], (ylim_delay[2] - ylim_delay[1])/ 10),3)
+        
         xlim <- c(min(selection()$step), max(selection()$step))
-        xbks <- seq(xlim[1], xlim[2], 100)
+        xstep <- ceiling((xlim[2] - xlim[1])/duration)
+        xbks <- seq(xlim[1], xlim[2], xstep)
         
         ylim_battery <- c(min(selection()$battery), max(selection()$battery))
         ybks_battery <- seq(0, 100, 10)

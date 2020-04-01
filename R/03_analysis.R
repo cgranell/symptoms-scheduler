@@ -1,7 +1,6 @@
 library(here)
 library(tidyverse)
 library(lubridate)
-library(manipulate)
 
 
 file_path <- here::here("data", "data.csv")
@@ -20,7 +19,7 @@ title_plot <- sel_device
 time_start <- min(selection$plan_date)
 time_end <- max(selection$plan_date)
 time_elapsed <- interval(time_start, time_end)
-duration <- round(as.duration(time_elapsed) / dhours(1), 2) # dhours(1), ddays(1)
+duration <- ceiling(as.duration(time_elapsed) / dhours(1)) # dhours(1), ddays(1)
 
 # 
 # # get rid of outlier
@@ -29,15 +28,15 @@ duration <- round(as.duration(time_elapsed) / dhours(1), 2) # dhours(1), ddays(1
 # 
 # cat(paste0("outliers: ", round(n_outliers / n_records, 2), "%"))
 
-
-
-
 ylim_delay <- c(min(selection$delay), max(selection$delay))
-ybks_delay <- seq(ylim_delay[1], ylim_delay[2], (ylim_delay[2] - ylim_delay[1])/ 10)
-xlim <- c(min(selection$step), max(selection$step))
-xbks <- seq(xlim[1], xlim[2], 100)
+ystep <- ceiling((ylim_delay[2] - ylim_delay[1]) / 10) 
+ybks_delay <- round(seq(ylim_delay[1], ylim_delay[2], ystep), 3)
 
-ylim_battery <- c(min(selection$battery), max(selection$battery))
+xlim <- c(min(selection$step), max(selection$step))
+xstep <- ceiling((xlim[2] - xlim[1])/duration)
+xbks <- seq(xlim[1], xlim[2], xstep)
+
+xylim_battery <- c(min(selection$battery), max(selection$battery))
 ybks_battery <- seq(0, 100, 10)
 
 # Dual-scale plot
@@ -52,7 +51,7 @@ selection %>%
     geom_line(aes(y = battery * scalefactor), color="red") +
     # geom_smooth(aes(y=delay), method = "lm") +
     geom_smooth(aes(y=delay), method="loess") +
-    labs(title=title,
+    labs(title=title_plot,
          subtitle=paste0("Start: ", time_start, " - End: ", time_end),
          x = "time steps [minutes]") + 
     scale_x_continuous(breaks=xbks, limits=xlim) +

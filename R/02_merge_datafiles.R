@@ -25,14 +25,13 @@ file_paths <- list.files(path = data_path, full.names = TRUE)
 data_merged <- data.frame()
 
 for (f in 1:length(file_names)) {
-  filename <- stringr::str_sub(file_names[f], 1, 8)
+  filename <- stringr::str_sub(file_names[f], 1, 5)
   
   parts <- stringr::str_split(filename, "_", simplify = TRUE)
   
   scheduler_id = parts[1]
   scheduler_name <- schedulers[[scheduler_id]]
-  day_exp <- as.integer(parts[2])
-  device_id <- parts[3]
+  device_id <- parts[2]
   device_name <- devices[[device_id]]
   
   data_temp <- read_csv(file_paths[f], col_names = TRUE)
@@ -42,8 +41,7 @@ for (f in 1:length(file_names)) {
     data_temp %>%
     mutate(scheduler = scheduler_name,
            device_id = device_id,
-           device_name = device_name,
-           day = day_exp) 
+           device_name = device_name) 
   
   data_merged <- rbind(data_merged, data_temp)
 }       
