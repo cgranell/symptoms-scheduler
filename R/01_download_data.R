@@ -7,14 +7,29 @@ library(readxl)
 
 #TODO: to retrieve list of csv files from same folder.
 #TODO: to propose naming convention
-gfile_name <- "Dummy1minA1_30-03-2020T12h23.csv"
-gfolder_url <- "https://drive.google.com/open?id=1Isz9zzE7g8P4DR6i4QGwTHM29MUDKDwA"
+
+devices <- c("BQ" = "BQ Aquaris V",
+             "NV" = "Nvidia Shield Tablet",
+             "A1" = "Xiaomi Mi A1")
+             # "H9" = "Honor 9",
+             # "MO" = "Motorola Moto G")
+
+files <- c("BQ" = "AD_01_BQ.csv",
+               "NV" = "AD_01_NV.csv",
+               "A1" = "AD_01_A1.csv")
+
+gfolder_url <- "https://drive.google.com/open?id=11oqV_vZqRDkbMdQ8m2KmAeL3-mOPKClh"
 gdata_path <- drive_get(as_id(gfolder_url))
 
-gdata_file <- drive_ls(path = gdata_path$name, pattern = gfile_name)
+for (f in 1:length(files)) {
+  gfile_name <- files[[f]]
+  gdata_file <- drive_ls(path = gdata_path$name, pattern = gfile_name)
 
-data_path <- here::here("data-raw", gdata_file$name) # local file
-drive_download(file = as_id(gdata_file$id), path = data_path, overwrite = TRUE, verbose = TRUE)
+  data_path <- here::here("data-raw", gdata_file$name) # local file
+  drive_download(file = as_id(gdata_file$id), path = data_path, overwrite = TRUE, verbose = TRUE)
+}
+
+
 drive_deauth()
 
 
