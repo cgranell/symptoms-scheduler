@@ -41,16 +41,17 @@ ui <- fluidPage(
             
             checkboxInput("selected_outlier", 
                            label = "Show outliers", 
-                           FALSE)
+                           FALSE),
             
-            # dateRangeInput("selected_dates", 
-            #                "Date range:",
-            #                start  = min_date,
-            #                end    = max_date,
-            #                min    = min_date,
-            #                max    = max_date,
-            #                format = "dd/mm/yy",
-            #                separator = " - ")
+            dateRangeInput("selected_dates",
+                           "Date range:",
+                           start  = min_date,
+                           end    = max_date,
+                           min    = min_date,
+                           max    = max_date,
+                           format = "dd/mm/yy",
+                           separator = " - "),
+            width = 3
             
             # sliderInput("selected_dates",
             #             "Dates:",
@@ -73,29 +74,36 @@ server <- function(input, output) {
     
     # Filter data series to current selection
     selection <- reactive({
-        # selected_interval <- interval(input$selected_dates[1], input$selected_dates[2])
+        selected_interval <- interval(input$selected_dates[1], input$selected_dates[2])
         
         if (input$selected_outlier) {
             data %>%
-                filter(device_id == input$selected_device)
-                       # plan_date %within% selected_interval)
+                filter(device_id == input$selected_device,
+                       plan_date %within% selected_interval)
             
         } else {
             data %>%
                 filter(device_id == input$selected_device,
-                       outlier == "no")
-                       # plan_date %within% selected_interval)
+                       outlier == "no",
+                       plan_date %within% selected_interval)
             
         }
     })
         
     output$id_plot <- renderPlot({
-        title <- paste0(unique(selection()$scheduler),
-                       " - ",
-                        unique(selection()$device_name))
-        
         time_start <- min(selection()$plan_date)
         time_end <- max(selection()$plan_date)
+        time_elapsed <- interval(time_start, time_end)
+        duration <- ceiling(as.duration(time_elapsed) / dhours(1))
+        
+        title <- paste0(unique(selection()$scheduler),
+                        " scheduler - ",
+                        unique(selection()$device_name))
+                      
+        subtitle <- paste0("[Selected interval] ",
+                           "Start: ", time_start, 
+                           " - ",
+                           "End: ", time_end)
         
         ylim_delay <- c(min(selection()$delay), max(selection()$delay))
         ystep <- ceiling((ylim_delay[2] - ylim_delay[1]) / 10) 
@@ -117,7 +125,7 @@ server <- function(input, output) {
             # geom_smooth(aes(y=delay), method = "lm") +
             geom_smooth(aes(y=delay), method="loess") +
             labs(title=title,
-                 subtitle=paste0("Start: ", time_start, " - End: ", time_end),
+                 subtitle=subtitle,
                  x = "time steps [minutes]") + 
             scale_x_continuous(breaks=xbks, limits=xlim) +
             scale_y_continuous(name="delay [seconds]", breaks=ybks_delay, limits=ylim_delay, 

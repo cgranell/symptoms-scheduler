@@ -5,7 +5,6 @@ library(tidyverse)
 library(googledrive)
 library(readxl)
 
-#TODO: to propose naming convention
 files <- c("BQ" = "AD_BQ.csv",
            "NV" = "AD_NV.csv",
            "A1" = "AD_A1.csv",
