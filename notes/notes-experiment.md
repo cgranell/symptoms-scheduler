@@ -33,3 +33,7 @@ Rounded square boxes represent the different tasks that have been implemented. T
 * planning timestamp corresponding to this execution | GPS task start execution timestamp | battery (%) by the time the task finishes | "GPS" task type
 
 Via calculating the difference between execution timestamp and planning timestamp, we can obtain the sleep time and the delay between the expected time (60k ms) and the actual execution time (~60k ms), as Carlos has already demonstrated.
+
+
+### Data interpreation
+
