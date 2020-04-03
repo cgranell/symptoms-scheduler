@@ -51,7 +51,18 @@ ui <- fluidPage(
                            max    = max_date,
                            format = "dd/mm/yy",
                            separator = " - "),
+            
+            # sliderInput("selected_dates",
+            #             label = h5("Select mapping date"),
+            #             min = min_date,
+            #             max = max_date,
+            #             value = as.Date(current_date),
+            #             timeFormat = "%d %b")
+                        # animate=animationOptions(interval = 2000, loop = FALSE)),
+            
+            
             width = 3
+            
             
             # sliderInput("selected_dates",
             #             "Dates:",
