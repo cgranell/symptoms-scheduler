@@ -52,7 +52,8 @@ for (f in 1:length(file_names)) {
 data_merged <- 
   data_merged %>%
   mutate(exec_date = as_datetime(exec_timestamp/1000),
-         plan_date = as_datetime(planning_timestamp/1000))
+         plan_date = as_datetime(planning_timestamp/1000),
+         time_period = ifelse(between(lubridate::hour(plan_date),0, 7), "nighttime", "daytime"))
 
 
 # Delay time is in seconds

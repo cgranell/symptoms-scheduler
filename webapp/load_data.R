@@ -28,7 +28,7 @@ means <-
          `Description`= device_desc,
          `Delay mean (mn)` = mean,
          `Standard deviation (sd)` = sd,
-         `Lower limit (mean + 2*sd)` = lo,
+         `Lower limit (mean - 2*sd)` = lo,
          `Upper limit (mean + 2*st)`= hi)
  
 

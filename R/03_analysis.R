@@ -44,9 +44,12 @@ ybks_battery <- seq(0, 100, 10)
 scalefactor <- ylim_delay[2] / ylim_battery[2]  
 
 
+palette <- c("daytime"="#66CC99", "nighttime"="#9999CC") #  #CC6666
+
+
 # width = 1600
 selection %>%
-  ggplot(aes(x = step)) +
+  ggplot(aes(x = step, color=factor(time_period))) +
     geom_line(aes(y = delay), alpha = 0.6, size = 0.5) +
     geom_line(aes(y = battery * scalefactor), color="red") +
     # geom_smooth(aes(y=delay), method = "lm") +
@@ -57,6 +60,13 @@ selection %>%
     scale_x_continuous(breaks=xbks, limits=xlim) +
     scale_y_continuous(name="delay [seconds]", breaks=ybks_delay, limits=ylim_delay, 
                        sec.axis=sec_axis(~./scalefactor, breaks=ybks_battery, name="battery [%]")) +
+    scale_color_manual(values = palette,
+                       breaks = names(palette),
+                       labels = c("day time \n(8-23 hr)", "night time \n(0-7 hr)")) +
+    guides(color=guide_legend(title="Time period", override.aes=list(fill=NA), nrow=2)) + # modify legend title
+    theme(legend.title = element_text(size=8), 
+        legend.position="bottom",
+        legend.direction = "horizontal") +
     theme_bw() +
     theme(
       axis.line.y.right = element_line(color = "red"), 
@@ -68,7 +78,7 @@ selection %>%
     )
 
 plot_path <- here::here("figs", "timestep.png")
-ggsave(filename = plot_path, width = 18, height = 16, units = "cm")
+ggsave(filename = plot_path, width = 20, height = 16, units = "cm")
 
 
 

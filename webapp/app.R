@@ -116,18 +116,27 @@ server <- function(input, output) {
         
         # Dual-scale plot
         scalefactor <- ylim_delay[2] / ylim_battery[2]  
+        
+        palette <- c("daytime"="#66CC99", "nighttime"="#9999CC") #  #CC6666
     
-        ggplot(selection(), aes(x = step)) +
+        ggplot(selection(), aes(x = step, color=factor(time_period))) +
             geom_line(aes(y = delay), alpha = 0.6, size = 0.5) +
             geom_line(aes(y = battery * scalefactor), color="red") +
             # geom_smooth(aes(y=delay), method = "lm") +
-            geom_smooth(aes(y=delay), method="loess") +
+            # geom_smooth(aes(y=delay), method="loess") +
             labs(title=title,
                  subtitle=subtitle,
                  x = "time steps [minutes since start of experiment] - 4 breaks per day") + 
             scale_x_continuous(breaks=xbks, limits=xlim) +
             scale_y_continuous(name="delay [seconds]", breaks=ybks_delay, limits=ylim_delay, 
                                sec.axis=sec_axis(~./scalefactor, breaks=ybks_battery, name="battery [%]")) +
+            scale_color_manual(values = palette,
+                               breaks = names(palette),
+                               labels = c("day \n(8-23 hr)", "night \n(0-7 hr)")) +
+            guides(color=guide_legend(title="", override.aes=list(fill=NA), nrow=2)) + # modify legend title
+            theme(legend.title = element_text(size=8), 
+                  legend.position="bottom",
+                  legend.direction = "horizontal") +
             theme_bw() +
             theme(
                 axis.line.y.right = element_line(color = "red"), 
@@ -135,7 +144,7 @@ server <- function(input, output) {
                 axis.text.y.right = element_text(color = "red"), 
                 axis.title.y.right = element_text(color = "red")
             )
-    }, height = 700)
+    }, height = 650)
     
 
  
