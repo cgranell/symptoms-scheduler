@@ -53,6 +53,8 @@ data_merged <-
   data_merged %>%
   mutate(exec_date = as_datetime(exec_timestamp/1000),
          plan_date = as_datetime(planning_timestamp/1000),
+         plan_day = lubridate::day(plan_date),
+         plan_month = lubridate::month(plan_date),
          time_period = ifelse(between(lubridate::hour(plan_date),0, 7), "nighttime", "daytime"))
 
 

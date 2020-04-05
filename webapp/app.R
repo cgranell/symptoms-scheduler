@@ -21,7 +21,7 @@ ui <- fluidPage(
     titlePanel("Symptoms - scheduler experiment"),
     
     
-    helpText("Create a line plot per device."),
+    helpText("Create a point plot per type of device."),
     
     sidebarLayout(
         sidebarPanel(
@@ -43,6 +43,13 @@ ui <- fluidPage(
                            end    = max_date,
                            format = "dd/MM",
                            separator = " to "),
+            
+            radioButtons(inputId = "selected_grouping", 
+                         label = "Grouping",
+                         choices = list("No grouping (+ regression line)" = "1", 
+                                        "By daytime/nightime" = "2", 
+                                        "By calendar day (+ regression line)" = "3"), 
+                         selected = 1),
 
             width = 3
             
@@ -64,7 +71,8 @@ server <- function(input, output) {
     })
     
     output$id_table <- renderTable({means},
-                                   striped = TRUE)
+                                   striped = TRUE,
+                                   spacing = "xs")
     
     # Filter data series to current selection
     selection <- reactive({
@@ -114,36 +122,65 @@ server <- function(input, output) {
         ylim_battery <- c(min(selection()$battery), max(selection()$battery))
         ybks_battery <- seq(0, 100, 10)
         
+        legend.nrow <- length(unique(selection()$plan_day))
+        
         # Dual-scale plot
         scalefactor <- ylim_delay[2] / ylim_battery[2]  
         
         palette <- c("daytime"="#66CC99", "nighttime"="#9999CC") #  #CC6666
     
-        ggplot(selection(), aes(x = step, color=factor(time_period))) +
-            geom_line(aes(y = delay), alpha = 0.6, size = 0.5) +
-            geom_line(aes(y = battery * scalefactor), color="red") +
+        p <- switch (input$selected_grouping,
+            "1" = ggplot(selection(), aes(x = step)),
+            "2" = ggplot(selection(), aes(x = step, color=factor(time_period))),
+            "3" = ggplot(selection(), aes(x = step, color=factor(plan_day)))
+        )
+        
+        p <- p + 
+            geom_point(aes(y = delay), alpha = 0.6, size = 0.7) +
+            geom_line(aes(y = battery * scalefactor), color="red", size=0.7)
+        
+        if (input$selected_grouping=="1" | 
+            input$selected_grouping=="3") {
+            p <- p + 
             # geom_smooth(aes(y=delay), method = "lm") +
-            # geom_smooth(aes(y=delay), method="loess") +
+                geom_smooth(aes(y=delay), method="loess")
+        }
+        
+        p <- p +    
             labs(title=title,
                  subtitle=subtitle,
                  x = "time steps [minutes since start of experiment] - 4 breaks per day") + 
             scale_x_continuous(breaks=xbks, limits=xlim) +
             scale_y_continuous(name="delay [seconds]", breaks=ybks_delay, limits=ylim_delay, 
-                               sec.axis=sec_axis(~./scalefactor, breaks=ybks_battery, name="battery [%]")) +
-            scale_color_manual(values = palette,
-                               breaks = names(palette),
-                               labels = c("day \n(8-23 hr)", "night \n(0-7 hr)")) +
-            guides(color=guide_legend(title="", override.aes=list(fill=NA), nrow=2)) + # modify legend title
-            theme(legend.title = element_text(size=8), 
-                  legend.position="bottom",
-                  legend.direction = "horizontal") +
+                               sec.axis=sec_axis(~./scalefactor, breaks=ybks_battery, name="battery [%]"))
+            
+        if (input$selected_grouping=="2") {
+            p <- p +
+                scale_color_manual(values = palette,
+                                   breaks = names(palette),
+                                   labels = c("day \n(8-23 hr)", "night \n(0-7 hr)")) +
+                guides(color=guide_legend(title="Period of day", nrow=2)) 
+        }
+        
+        if (input$selected_grouping=="3") {
+            p <- p +
+                guides(color=guide_legend(title="Day", 
+                                          override.aes=list(fill=NA),
+                                          nrow=legend.nrow))
+        }
+        
+        p <- p +
+            theme(legend.title = element_text(size=8)) +
             theme_bw() +
             theme(
                 axis.line.y.right = element_line(color = "red"), 
                 axis.ticks.y.right = element_line(color = "red"),
                 axis.text.y.right = element_text(color = "red"), 
                 axis.title.y.right = element_text(color = "red")
+                
             )
+        p
+            
     }, height = 650)
     
 

@@ -24,9 +24,9 @@ means <-
             sd = round(sd(delay), 3),
             lo = round(mean - 2*sd, 3),
             hi = round(mean + 2*sd, 3)) %>%
-  select(`device ID`= device_id,
+  select(`Device ID`= device_id,
          `Description`= device_desc,
-         `Delay mean (mn)` = mean,
+         `Delay mean (mean)` = mean,
          `Standard deviation (sd)` = sd,
          `Lower limit (mean - 2*sd)` = lo,
          `Upper limit (mean + 2*st)`= hi)
