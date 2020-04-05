@@ -19,9 +19,8 @@ title_plot <- sel_device
 time_start <- min(selection$plan_date)
 time_end <- max(selection$plan_date)
 time_elapsed <- interval(time_start, time_end)
-duration <- ceiling(as.duration(time_elapsed) / dhours(1)) # dhours(1), ddays(1)
+duration <- ceiling(as.duration(time_elapsed) / ddays(1)) # dhours(1), ddays(1)
 
-# 
 # # get rid of outlier
 # n_records <- max(data$step)
 # n_outliers <- nrow(filter(data, outlier == "yes"))
@@ -34,12 +33,13 @@ ybks_delay <- round(seq(ylim_delay[1], ylim_delay[2], ystep), 3)
 
 xlim <- c(min(selection$step), max(selection$step))
 xstep <- ceiling((xlim[2] - xlim[1])/duration)
+xstep <- 360
 xbks <- seq(xlim[1], xlim[2], xstep)
 
-xylim_battery <- c(min(selection$battery), max(selection$battery))
+ylim_battery <- c(min(selection$battery), max(selection$battery))
 ybks_battery <- seq(0, 100, 10)
 
-# Dual-scale plot
+# Dual-scale plot based on time step
 # https://stackoverflow.com/questions/3099219/ggplot-with-2-y-axes-on-each-side-and-different-scales
 scalefactor <- ylim_delay[2] / ylim_battery[2]  
 
@@ -67,8 +67,10 @@ selection %>%
       # axis.text.y.left=element_text(color="blue"),
     )
 
-plot_path <- here::here("figs", "advanced-1A.png")
+plot_path <- here::here("figs", "timestep.png")
 ggsave(filename = plot_path, width = 18, height = 16, units = "cm")
+
+
 
 # 
 # manipulate(

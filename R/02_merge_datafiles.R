@@ -33,6 +33,7 @@ for (f in 1:length(file_names)) {
   scheduler_name <- schedulers[[scheduler_id]]
   device_id <- parts[2]
   device_name <- devices[[device_id]]
+  device_desc <- paste0(scheduler_name, " - ", device_name)
   
   data_temp <- read_csv(file_paths[f], col_names = TRUE)
 
@@ -41,7 +42,8 @@ for (f in 1:length(file_names)) {
     data_temp %>%
     mutate(scheduler = scheduler_name,
            device_id = device_id,
-           device_name = device_name) 
+           device_name = device_name,
+           device_desc = device_desc) 
   
   data_merged <- rbind(data_merged, data_temp)
 }       

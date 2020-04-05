@@ -9,21 +9,10 @@
 
 library(shiny)
 library(here)
-library(lubridate)
 library(tidyverse)
+library(lubridate)
 
-file_path <- here::here("data", "data.csv")
-
-data <- read_csv(file_path, col_names = TRUE)
-
-devices_lbl <- c("Advanced - BQ Aquaris V" = "BQ",
-                 "Advanced - Nvidia Shield Tablet" = "NV",
-                 "Advanced - Xiaomi Mi A1" = "A1",
-                 "Basic - Honor 9" = "H9",
-                 "Basic - Motorola Moto G" = "MO")
-
-min_date = as_date(min(data$plan_date))
-max_date = as_date(max(data$plan_date))
+source("load_data.R")
 
 
 # Define UI for application that draws a histogram
@@ -31,11 +20,14 @@ ui <- fluidPage(
 
     titlePanel("Symptoms - scheduler experiment"),
     
+    
+    helpText("Create a line plot per device."),
+    
     sidebarLayout(
         sidebarPanel(
         
-            selectInput("selected_device", 
-                        label = "Devices:", 
+            selectInput(inputId = "selected_device", 
+                        label = "Scheduler - Devices:", 
                         choices = devices_lbl),
             
             
@@ -43,45 +35,36 @@ ui <- fluidPage(
                            label = "Show outliers", 
                            FALSE),
             
-            dateRangeInput("selected_dates",
-                           "Date range:",
-                           start  = min_date,
-                           end    = max_date,
+            dateRangeInput(inputId =  "selected_dates",
+                           label = "Time interval:",
                            min    = min_date,
                            max    = max_date,
-                           format = "dd/mm/yy",
-                           separator = " - "),
-            
-            # sliderInput("selected_dates",
-            #             label = h5("Select mapping date"),
-            #             min = min_date,
-            #             max = max_date,
-            #             value = as.Date(current_date),
-            #             timeFormat = "%d %b")
-                        # animate=animationOptions(interval = 2000, loop = FALSE)),
-            
-            
+                           start  = start_date,
+                           end    = max_date,
+                           format = "dd/MM",
+                           separator = " to "),
+
             width = 3
             
-            
-            # sliderInput("selected_dates",
-            #             "Dates:",
-            #             min = min_date,
-            #             max = max_date,
-            #             # step = 1,  
-            #             # sep = "",
-            #             value = min_date,
-            #             timeFormat="%Y-%m-%d")
         ),
         
         mainPanel(
-           plotOutput("id_plot")
+            textOutput("id_label_summary"),
+            tableOutput("id_table"), 
+            plotOutput("id_plot")
         )
     )
 )
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
+    
+    output$id_label_summary <- renderText({ 
+        "Summary of delay ranges (Y-axis). Outlier = value out of the range [lower, upper]."
+    })
+    
+    output$id_table <- renderTable({means},
+                                   striped = TRUE)
     
     # Filter data series to current selection
     selection <- reactive({
@@ -107,14 +90,17 @@ server <- function(input, output) {
         time_elapsed <- interval(time_start, time_end)
         duration <- ceiling(as.duration(time_elapsed) / dhours(1))
         
-        title <- paste0(unique(selection()$scheduler),
-                        " scheduler - ",
-                        unique(selection()$device_name))
+        step_start <- min(selection()$step)
+        step_end <- max(selection()$step)
+        
+        title <- paste0(selection()$device_desc)
                       
-        subtitle <- paste0("[Selected interval] ",
-                           "Start: ", time_start, 
+        subtitle <- paste("[Selected time interval]",
+                           "Start:", time_start, 
+                           "(step", step_start, ")", 
                            " - ",
-                           "End: ", time_end)
+                           "End:", time_end,
+                           "(step", step_end, ")")
         
         ylim_delay <- c(min(selection()$delay), max(selection()$delay))
         ystep <- ceiling((ylim_delay[2] - ylim_delay[1]) / 10) 
@@ -122,6 +108,7 @@ server <- function(input, output) {
         
         xlim <- c(min(selection()$step), max(selection()$step))
         xstep <- ceiling((xlim[2] - xlim[1])/duration)
+        xstep <- 360 # number of steps per day / 4
         xbks <- seq(xlim[1], xlim[2], xstep)
         
         ylim_battery <- c(min(selection()$battery), max(selection()$battery))
@@ -137,7 +124,7 @@ server <- function(input, output) {
             geom_smooth(aes(y=delay), method="loess") +
             labs(title=title,
                  subtitle=subtitle,
-                 x = "time steps [minutes]") + 
+                 x = "time steps [minutes since start of experiment] - 4 breaks per day") + 
             scale_x_continuous(breaks=xbks, limits=xlim) +
             scale_y_continuous(name="delay [seconds]", breaks=ybks_delay, limits=ylim_delay, 
                                sec.axis=sec_axis(~./scalefactor, breaks=ybks_battery, name="battery [%]")) +
@@ -148,7 +135,9 @@ server <- function(input, output) {
                 axis.text.y.right = element_text(color = "red"), 
                 axis.title.y.right = element_text(color = "red")
             )
-    })
+    }, height = 700)
+    
+
  
 }
 
