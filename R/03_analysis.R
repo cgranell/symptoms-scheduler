@@ -9,7 +9,14 @@ data <- read_csv(file_path, col_names = TRUE)
 
 # plan_date is the driver field to interpet the date. The same date is twice
 
-sel_device <- "H9"
+devices <- c("BQ" = "BQ Aquaris V",
+             "NV" = "Nvidia Shield Tablet",
+             "A1" = "Xiaomi Mi A1",
+             "H9" = "Honor 9",
+             "MO" = "Motorola Moto G")
+
+
+sel_device <- names(devices)[4]
 
 selection <- 
   data %>%
@@ -84,10 +91,10 @@ selection %>%
 plot_path <- here::here("figs", "timestep.png")
 ggsave(filename = plot_path, width = 20, height = 16, units = "cm")
 
-legend.nrow <- length(unique(selection$plan_day))
 
 ## line chart, grouped by plan_day
-# width = 1600
+legend.nrow <- length(unique(selection$plan_day))
+
 selection %>%
   ggplot(aes(x = step, color=factor(plan_day))) +
   geom_point(aes(y = delay), alpha = 0.6, size = 0.5) +
@@ -117,6 +124,88 @@ selection %>%
     # axis.text.y.left=element_text(color="blue"),
   )
 
+
+##############
+
+## Some plot to create: 
+## 1/ to compute variation of delay over time
+## 2/ to compate corralation betten dealay adn battery level
+## 3/ to cluster delay
+
+
+set.seed(1)
+
+sel_device <- names(devices)[4]
+
+selection <- 
+  data %>%
+  filter(device_id == sel_device,
+         plan_month == 4,
+         outlier == "no")
+n_clusters <- 5
+clusters <- kmeans(selection$delay, n_clusters)
+
+selection$cluster <- as.factor(clusters$cluster)
+
+p_kmeans <-
+  selection %>%
+  ggplot(aes(x = step, y = delay, colour=cluster)) +
+  geom_point() + 
+  theme_bw()
+  
+ylim_delay <- c(min(selection$delay), max(selection$delay))
+ystep <- ceiling((ylim_delay[2] - ylim_delay[1]) / 10) 
+ybks_delay <- round(seq(ylim_delay[1], ylim_delay[2], ystep), 3)
+
+p_kmeans <- p_kmeans +
+  ggtitle(paste("Device:",sel_device , "\nMethod: K-means with", n_clusters, "clusters")) + 
+  scale_x_discrete(name = "Timesteps (April)") +
+  scale_y_continuous(name="mean delay [seconds]", breaks=ybks_delay, limits=ylim_delay)
+
+p_kmeans
+
+
+plot_path <- here::here("figs", "kmeans.png")
+ggsave(plot = p_kmeans, filename = plot_path, width = 20, height = 16, units = "cm")
+
+
+## 4/ boxplot 
+# A boxplot summarizes the distribution of a continuous variable.
+
+sel_device <- names(devices)[4]
+
+selection <- 
+  data %>%
+  filter(device_id == sel_device,
+         plan_month == 4,
+         outlier == "no")
+
+fill <- "#4271AE"
+line <- "#1F3552"
+
+p_box <- 
+  selection %>%
+  ggplot(aes(x = factor(plan_day), y = delay)) +
+  geom_boxplot(fill = fill, colour = line, alpha = 0.7,
+               outlier.colour = "#1F3552", outlier.shape = 20) +
+  theme_bw()
+  
+ylim_delay <- c(min(selection$delay), max(selection$delay))
+ystep <- ceiling((ylim_delay[2] - ylim_delay[1]) / 10) 
+ybks_delay <- round(seq(ylim_delay[1], ylim_delay[2], ystep), 3)
+
+p_box <- p_box +
+  ggtitle(paste("Device:",sel_device , "\nMethod: Boxplot (with jitter) of mean delay by day")) + 
+  scale_x_discrete(name = "Day (April)") +
+  scale_y_continuous(name="mean delay [seconds]", breaks=ybks_delay, limits=ylim_delay)
+
+p_box  <- p_box + geom_jitter(shape=1, size=0.4, alpha=0.4)
+
+p_box
+
+
+plot_path <- here::here("figs", "boxplot.png")
+ggsave(plot = p_box, filename = plot_path, width = 16, height = 16, units = "cm")
 
 # 
 # manipulate(
