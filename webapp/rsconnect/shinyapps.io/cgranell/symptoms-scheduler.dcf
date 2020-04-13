@@ -5,8 +5,8 @@ account: cgranell
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 2028819
-bundleId: 3004574
+bundleId: 3006765
 url: https://cgranell.shinyapps.io/symptoms-scheduler/
-when: 1586733598.18879
+when: 1586784748.06356
 asMultiple: FALSE
 asStatic: FALSE

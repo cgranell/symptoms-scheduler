@@ -3,9 +3,11 @@ library(tidyverse)
 library(lubridate)
 
 
-file_path <- here::here("data", "data.csv")
+# file_path <- here::here("data", "data.csv")
+# data <- read_csv(file_path, col_names = TRUE)
 
-data <- read_csv(file_path, col_names = TRUE)
+file_path <- here::here("data", "data.rds")
+data <- readRDS(file_path)
 
 # plan_date is the driver field to interpet the date. The same date is twice
 
@@ -20,7 +22,8 @@ sel_device <- names(devices)[4]
 
 selection <- 
   data %>%
-  filter(device_id == sel_device)
+  filter(device_id == sel_device,
+         outlier == "no")
 
 title_plot <- sel_device
 time_start <- min(selection$plan_date)
@@ -86,8 +89,6 @@ selection %>%
     )
 
 
-
-
 plot_path <- here::here("figs", "timestep.png")
 ggsave(filename = plot_path, width = 20, height = 16, units = "cm")
 
@@ -125,11 +126,34 @@ selection %>%
   )
 
 
+
+
+#############
+# Use plan_date as x axis, adjuntic data ticks adn breaks
+
+library(scales)
+
+selection %>%
+  ggplot(aes(x = plan_date, color=factor(plan_day))) +
+  geom_point(aes(y = delay), alpha = 0.6, size = 0.5) +
+  scale_y_continuous(name="delay [seconds]", breaks=ybks_delay, limits=ylim_delay) +
+  scale_x_datetime(name="Date", 
+                   breaks = scales::date_breaks("12 hours"),
+                   labels = scales::date_format("%d-%b\n%H:%M", tz="CET"),
+                   expand = c(0,0))    #, labels=scales::date_format("%d %b"))
+
+
+
 ##############
 
 ## Some plot to create: 
 ## 1/ to compute variation of delay over time
-## 2/ to compate corralation betten dealay adn battery level
+
+
+
+
+
+## 2/ to compate corralation betten delay and battery level
 ## 3/ to cluster delay
 
 

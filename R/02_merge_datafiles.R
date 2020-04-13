@@ -35,7 +35,13 @@ for (f in 1:length(file_names)) {
   device_name <- devices[[device_id]]
   device_desc <- paste0(scheduler_name, " - ", device_name)
   
-  data_temp <- read_csv(file_paths[f], col_names = TRUE)
+  data_temp <- read_csv(file_paths[f], col_names = TRUE, 
+                        cols(
+                          battery = col_double(),
+                          exec_timestamp = col_double(),
+                          planning_timestamp = col_double(),
+                          task = col_character()
+                        ))
 
 
   data_temp <- 
@@ -51,11 +57,14 @@ for (f in 1:length(file_names)) {
 
 data_merged <- 
   data_merged %>%
-  mutate(exec_date = as_datetime(exec_timestamp/1000),
-         plan_date = as_datetime(planning_timestamp/1000),
+  mutate(#exec_date = as_datetime(exec_timestamp/1000),
+         #plan_date = as_datetime(planning_timestamp/1000),
+         exec_date = as_datetime(exec_timestamp/1000, tz="Europe/Madrid"),
+         plan_date = as_datetime(planning_timestamp/1000, tz="Europe/Madrid"),
+         plan_hour = lubridate::hour(plan_date),
          plan_day = lubridate::day(plan_date),
          plan_month = lubridate::month(plan_date),
-         time_period = ifelse(between(lubridate::hour(plan_date),0, 7), "nighttime", "daytime"))
+         time_period = ifelse(between(plan_hour,0, 7), "nighttime", "daytime"))
 
 
 # Delay time is in seconds
@@ -64,7 +73,7 @@ data_merged <-
   group_by(device_id) %>%
   arrange(plan_date) %>%
   mutate(step = row_number(),
-         delay = as.duration(interval(plan_date, exec_date)) - baseline_delay)
+         delay = (as.duration(interval(plan_date, exec_date)) - baseline_delay) / dseconds(1))
 
 
 # Outliers
@@ -84,8 +93,14 @@ data_complete <-
 
 data_path <- here::here("data", "data.csv")
 write_csv(data_complete, data_path)
+data_path <- here::here("data", "data.rds")
+saveRDS(data_complete, data_path)
+
 data_path <- here::here("webapp","data", "data.csv")
 write_csv(data_complete, data_path)
+data_path <- here::here("webapp","data", "data.rds")
+saveRDS(data_complete, data_path)
+
 
 # data_path <- here::here("data", "data.rda")
 # saveRDS(data_complete, data_path)

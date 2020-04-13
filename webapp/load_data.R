@@ -1,8 +1,10 @@
 
 # Device data
-file_path <- here::here("data", "data.csv")
+file_path <- here::here("data", "data.rds")
+data <- readRDS(file_path)
 
-data <- read_csv(file_path, col_names = TRUE)
+# file_path <- here::here("data", "data.csv")
+# data <- read_csv(file_path, col_names = TRUE)
 
 devices_lbl <- c("Advanced - BQ Aquaris V" = "BQ",
                  "Advanced - Nvidia Shield Tablet" = "NV",
@@ -10,10 +12,10 @@ devices_lbl <- c("Advanced - BQ Aquaris V" = "BQ",
                  "Basic - Honor 9" = "H9",
                  "Basic - Motorola Moto G" = "MO")
 
-start_date = as_date(min(data$plan_date))
-end_date = as_date(max(data$plan_date))
+start_date = min(data$plan_date)
+end_date = max(data$plan_date)
 min_date = start_date 
-max_date = ymd(end_date) + days(1)
+max_date = end_date + days(1)
   
 # Summary table
 
