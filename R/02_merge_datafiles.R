@@ -1,10 +1,8 @@
 
-# install.packages(c("here", "tidyverse", "lubridate", "stringr"))
 library(here)
 library(tidyverse)
 library(lubridate)
 library(stringr)
-
 
 schedulers <- c("AD" = "Advanced", 
                 "BA" = "Basic")
@@ -15,8 +13,13 @@ devices <- c("BQ" = "BQ Aquaris V",
              "H9" = "Honor 9",
              "MO" = "Motorola Moto G")
 
-baseline_delay <- 60
+# files <- tibble(
+#   experiment = c(rep("#1", 5), rep("#2", 5)),
+#   gsheets_name = c("AD_BQ.csv", "AD_NV.csv", "AD_A1.csv", "BA_H9.csv", "BA_MO.csv",
+#                    "BA_BQ.csv", "BA_NV.csv", "BA_A1.csv", "AD_H9.csv", "AD_MO.csv")
+# )
 
+baseline_delay <- 60
 
 data_path <- here::here("data-raw")
 file_names <- list.files(path  = data_path)
@@ -24,8 +27,17 @@ file_paths <- list.files(path = data_path, full.names = TRUE)
 
 data_merged <- data.frame()
 
+get_experiment_id <- function(filename) {
+  fullname <- paste0(filename, ".csv")
+  files %>%
+    filter(gsheets_name == fullname) %>%
+    select(experiment) %>%
+    pull
+}
+
 for (f in 1:length(file_names)) {
   filename <- stringr::str_sub(file_names[f], 1, 5)
+  exp_id <- get_experiment_id(filename)
   
   parts <- stringr::str_split(filename, "_", simplify = TRUE)
   
@@ -46,7 +58,8 @@ for (f in 1:length(file_names)) {
 
   data_temp <- 
     data_temp %>%
-    mutate(scheduler = scheduler_name,
+    mutate(exp_id = exp_id,
+           scheduler = scheduler_name,
            device_id = device_id,
            device_name = device_name,
            device_desc = device_desc) 

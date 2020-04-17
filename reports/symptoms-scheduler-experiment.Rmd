@@ -1,0 +1,151 @@
+---
+title: "Symptoms - scheduler experiment"
+author: "Carlos Granell, SyMptOMS team, [GEOTEC research group](http://geotec.uji.es/) "
+date: "17/4/2020 (updated `r format(Sys.time(), '%d %B, %Y')`)"
+output: 
+  html_document:
+    df_print: paged
+    toc: yes
+---
+
+```{r setup, include=FALSE, eval=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+This document analyses the self-developed sheduler componnet in Android-based mobile devices as part of the [SyMptOMS project](http://geotec.uji.es/projects/SyMptOMS/). 
+
+
+## Reproduce paper
+
+To create the PDF of the computational notebook you can run the following commands in a new R session.
+If you have problems rendering the PDF you can execute each chunk independently in [RStudio](https://rstudio.com/products/rstudio/).
+
+```{r render_with_rmarkdown, eval=FALSE}
+require("knitr")
+require("rmarkdown")
+rmarkdown::render("symptoms-scheduler-experiment.Rmd", output_format = "pdf_document")
+```
+
+This document does not install the required R packages by default.
+You can run the script `install.R` to install all required dependencies on a new R installation, or use `install.packages(..)` to install missing R packages.
+
+```{r install_r, eval=FALSE}
+source("R/install.R")
+```
+
+The plots and tables use the packages [`ggplot2`](http://ggplot2.tidyverse.org/), [`knitr::kable()`](https://yihui.name/knitr/) and [`kableExtra`](https://cran.r-project.org/package=kableExtra).
+
+Required libraries and runtime environment description are as follows.
+
+```{r load_libraries, echo=TRUE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(kableExtra)
+library(here)
+library(googledrive)
+library(lubridate)
+library(stringr)
+```
+
+
+```{r set_seed}
+# just in case
+set.seed(nchar("Symptoms - scheduler experiment"))
+```
+
+```{r gsheetdata_files}
+
+files_per_experiment <- 5
+
+files <- tibble(
+  experiment = c(rep("#1", files_per_experiment), rep("#2", files_per_experiment)),
+  gsheets_name = c("AD_BQ.csv", "AD_NV.csv", "AD_A1.csv", "BA_H9.csv", "BA_MO.csv",
+                   "BA_BQ.csv", "BA_NV.csv", "BA_A1.csv", "AD_H9.csv", "AD_MO.csv")
+  #TODO: issue readinf private files from google drive: files cannot be downloaded    
+  # gsheets_id = c() 
+)
+```
+
+
+
+```{r drive_connect, eval=FALSE}
+gfolder_url <- "https://drive.google.com/open?id=11oqV_vZqRDkbMdQ8m2KmAeL3-mOPKClh"
+gdata_path <- drive_get(as_id(gfolder_url))
+```
+
+```{r gsheetdata_exp1_download, eval=FALSE}
+# Download files corresponding to 'Experiment #1'
+files_exp <- files %>%
+  filter(experiment =="#1") %>%
+  select(gsheets_name)
+
+for (f in 1:files_per_experiment) {
+  gfile_name <-files_exp$gsheets_name[f]
+  gdata_file <- drive_ls(path = gdata_path$name, pattern = gfile_name)
+
+  data_path <- here::here("data-raw", gdata_file$name) # local file
+  drive_download(file = as_id(gdata_file$id), path = data_path, overwrite = TRUE, verbose = TRUE)
+}
+
+```
+
+```{r gsheetdata_exp2_download, eval=FALSE}
+# Download files corresponding to 'Experiment #2'
+files_exp <- files %>%
+  filter(experiment =="#2") %>%
+  select(gsheets_name)
+
+for (f in 1:files_per_experiment) {
+  gfile_name <-files_exp$gsheets_name[f]
+  gdata_file <- drive_ls(path = gdata_path$name, pattern = gfile_name)
+
+  data_path <- here::here("data-raw", gdata_file$name) # local file
+  drive_download(file = as_id(gdata_file$id), path = data_path, overwrite = TRUE, verbose = TRUE)
+}
+
+```
+
+```{r drive_disconnect, eval=FALSE}
+drive_deauth()
+```
+
+
+## Data preparation
+
+```{r merge_datafiles}
+source(here::here("R", "02_merge_datafiles.R"))
+```
+
+## Scheduler assessment
+
+```{r load_assessdata, warning=FALSE}
+assessment_file <- here::here("data", "data.rds")
+data <- readRDS(assessment_file)
+```
+
+```{r summary_table}
+
+total_observations <- nrow(data) 
+
+summaries <- 
+  data %>%
+  group_by(exp_id, device_desc) %>%
+  summarise(`# observations` = n(),
+            `start datetime` = min(plan_date),
+            `end_datetime` = max(plan_date),
+            `mean delay` = first(mean),
+            `sd` = first(sd),
+            `mean - 2sd` = first(lo),
+            `mean + 2sd` = first(hi))
+
+kable(summaries,
+      format = "html",
+      booktabs = TRUE,
+      caption = paste("Information of data collected per device. Total number of observations =", total_observations)) %>%
+  kable_styling(full_width =TRUE)
+
+ 
+
+```
+
+
+

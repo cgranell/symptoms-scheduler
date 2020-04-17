@@ -150,7 +150,11 @@ selection %>%
 ## 1/ to compute variation of delay over time
 
 
+## Explore outliers
 
+## Explore when battery level is lower than a threshold
+
+## Find anomalies
 
 
 ## 2/ to compate corralation betten delay and battery level
