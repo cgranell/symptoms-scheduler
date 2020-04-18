@@ -44,6 +44,7 @@ library(here)
 library(googledrive)
 library(lubridate)
 library(stringr)
+library(scales)
 ```
 
 
@@ -111,7 +112,7 @@ drive_deauth()
 
 ## Data preparation
 
-```{r merge_datafiles}
+```{r merge_datafiles, eval=FALSE}
 source(here::here("R", "02_merge_datafiles.R"))
 ```
 
@@ -120,12 +121,15 @@ source(here::here("R", "02_merge_datafiles.R"))
 ```{r load_assessdata, warning=FALSE}
 assessment_file <- here::here("data", "data.rds")
 data <- readRDS(assessment_file)
-```
-
-```{r summary_table}
 
 total_observations <- nrow(data) 
+baseline_delay <- 60
+```
 
+`r scales::comma(total_observations, big.mark = ".")` observations registered in both experiments. Table below shows totla numbers per device. 
+ 
+
+```{r gobal_summary_table}
 summaries <- 
   data %>%
   group_by(exp_id, device_desc) %>%
@@ -135,17 +139,45 @@ summaries <-
             `mean delay` = first(mean),
             `sd` = first(sd),
             `mean - 2sd` = first(lo),
-            `mean + 2sd` = first(hi))
+            `mean + 2sd` = first(hi)) %>%
+  arrange(exp_id, device_desc)
 
 kable(summaries,
       format = "html",
       booktabs = TRUE,
-      caption = paste("Information of data collected per device. Total number of observations =", total_observations)) %>%
+      caption = "Descriptive data per device.") %>%
   kable_styling(full_width =TRUE)
-
- 
 
 ```
 
+__Key Variables__:
+
+- quantitative (interval)
+
+  - `plan_date` (_datetime_): task planning time.
+  - `exec_date` (_datetime_): task execution time.  
+- quantitative (ratio)
+
+  - `delay` (_numeric_): execution delay in seconds ((`exec_date` - `plan_date`) - `r baseline_delay`).
+- categorital (ordinal)
+
+  - `battery`(_numeric_): battery level
+- categorical (nominal)
+
+  - `device_id`/`device_name`: device identifier/name
+  - `exp_id`: experiment identifier.
+  - `scheduler`: scheduler type.
+  
+#### Distribution of `delay` over `plan_date`
+
+See [shiny app](https://cgranell.shinyapps.io/symptoms-scheduler/)
+
+
+#### shows a scatterplto to 
+
+
+```{r}
+
+```
 
 

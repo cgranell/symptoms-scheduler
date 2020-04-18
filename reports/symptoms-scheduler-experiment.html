@@ -1656,7 +1656,7 @@ $(document).ready(function () {
 
 <h1 class="title toc-ignore">Symptoms - scheduler experiment</h1>
 <h4 class="author">Carlos Granell, SyMptOMS team, <a href="http://geotec.uji.es/">GEOTEC research group</a></h4>
-<h4 class="date">17/4/2020 (updated 18 abril, 2020)</h4>
+<h4 class="date">17/4/2020 (updated 19 abril, 2020)</h4>
 
 </div>
 
@@ -1684,7 +1684,8 @@ library(kableExtra)
 library(here)
 library(googledrive)
 library(lubridate)
-library(stringr)</code></pre>
+library(stringr)
+library(scales)</code></pre>
 <pre class="r"><code># just in case
 set.seed(nchar(&quot;Symptoms - scheduler experiment&quot;))</code></pre>
 <pre class="r"><code>files_per_experiment &lt;- 5
@@ -1731,9 +1732,12 @@ for (f in 1:files_per_experiment) {
 <div id="scheduler-assessment" class="section level2">
 <h2>Scheduler assessment</h2>
 <pre class="r"><code>assessment_file &lt;- here::here(&quot;data&quot;, &quot;data.rds&quot;)
-data &lt;- readRDS(assessment_file)</code></pre>
-<pre class="r"><code>total_observations &lt;- nrow(data) 
-summaries &lt;- 
+data &lt;- readRDS(assessment_file)
+
+total_observations &lt;- nrow(data) 
+baseline_delay &lt;- 60</code></pre>
+<p>120.416 observations registered in both experiments. Table below shows totla numbers per device.</p>
+<pre class="r"><code>summaries &lt;- 
   data %&gt;%
   group_by(exp_id, device_desc) %&gt;%
   summarise(`# observations` = n(),
@@ -1742,16 +1746,17 @@ summaries &lt;-
             `mean delay` = first(mean),
             `sd` = first(sd),
             `mean - 2sd` = first(lo),
-            `mean + 2sd` = first(hi))
+            `mean + 2sd` = first(hi)) %&gt;%
+  arrange(exp_id, device_desc)
 
 kable(summaries,
       format = &quot;html&quot;,
       booktabs = TRUE,
-      caption = paste0(&quot;Information of data collected per device. totoal number of observation =&quot;, total_observations)) %&gt;%
-  kable_styling(latex_options = &quot;scale_down&quot;)</code></pre>
+      caption = &quot;Descriptive data per device.&quot;) %&gt;%
+  kable_styling(full_width =TRUE)</code></pre>
 <table class="table" style="margin-left: auto; margin-right: auto;">
 <caption>
-Information of data collected per device. totoal number of observation =120416
+Descriptive data per device.
 </caption>
 <thead>
 <tr>
@@ -2077,6 +2082,32 @@ Basic - Xiaomi Mi A1
 </tr>
 </tbody>
 </table>
+<p><em>Key Variables</em>:</p>
+<ul>
+<li><p>quantitative (interval).</p>
+<ul>
+<li><code>plan_date</code> (<em>datetime</em>): task planning time.</li>
+<li><code>exec_date</code> (<em>datetime</em>): task execution time.<br />
+</li>
+</ul></li>
+<li><p>quantitative (ratio)</p>
+<ul>
+<li><code>delay</code> (<em>numeric</em>): execution delay in seconds ((<code>exec_date</code> - <code>plan_date</code>) - 60.</li>
+</ul></li>
+<li><p>categorital (ordinal)</p>
+<ul>
+<li><code>battery</code>(<em>numeric</em>): battery level</li>
+</ul></li>
+<li><p>categorical (nominal)</p>
+<ul>
+<li><code>device_id</code>/<code>device_name</code>: device identifier/name</li>
+<li><code>exp_id</code>: experiment identifier.</li>
+<li><code>scheduler</code>: scheduler type.</li>
+</ul></li>
+</ul>
+<div id="distribution." class="section level4">
+<h4>Distribution.</h4>
+</div>
 </div>
 
 

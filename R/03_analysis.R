@@ -200,6 +200,7 @@ ggsave(plot = p_kmeans, filename = plot_path, width = 20, height = 16, units = "
 ## 4/ boxplot 
 # A boxplot summarizes the distribution of a continuous variable.
 
+library(plotly)
 sel_device <- names(devices)[4]
 
 selection <- 
@@ -213,10 +214,13 @@ line <- "#1F3552"
 
 p_box <- 
   selection %>%
-  ggplot(aes(x = factor(plan_day), y = delay)) +
-  geom_boxplot(fill = fill, colour = line, alpha = 0.7,
+  ggplot(aes(x = factor(plan_day), y = delay, fill=factor(exp_id))) +
+  geom_boxplot(#fill = fill, colour = line, 
+               alpha = 0.7,
                outlier.colour = "#1F3552", outlier.shape = 20) +
-  theme_bw()
+  # facet_wrap(~exp_id, scales = "free_x") +
+  theme_bw() +
+  guides(fill=FALSE)
   
 ylim_delay <- c(min(selection$delay), max(selection$delay))
 ystep <- ceiling((ylim_delay[2] - ylim_delay[1]) / 10) 
@@ -231,6 +235,7 @@ p_box  <- p_box + geom_jitter(shape=1, size=0.4, alpha=0.4)
 
 p_box
 
+ggplotly(p_box)
 
 plot_path <- here::here("figs", "boxplot.png")
 ggsave(plot = p_box, filename = plot_path, width = 16, height = 16, units = "cm")

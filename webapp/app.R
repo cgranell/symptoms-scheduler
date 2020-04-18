@@ -66,9 +66,9 @@ ui <- fluidPage(
             
             radioButtons(inputId = "selected_grouping", 
                          label = "Grouping",
-                         choices = list("No grouping (+ smoothing line)" = "1", 
-                                        "By daytime/nightime" = "2", 
-                                        "By calendar day (+ smoothing line)" = "3"), 
+                         choices = list("By scheduler type (+ smoothing line)" = "1"), 
+                                        # "By daytime/nightime" = "2", 
+                                        # "By calendar day (+ smoothing line)" = "3"), 
                          selected = 1),
             
             selectInput(inputId = "selected_model", 
@@ -81,7 +81,7 @@ ui <- fluidPage(
         
         mainPanel(
             textOutput("id_label_summary"),
-            tableOutput("id_table"), 
+            # tableOutput("id_table"), 
             plotOutput("id_plot")
         )
     )
@@ -91,7 +91,8 @@ ui <- fluidPage(
 server <- function(input, output) {
     
     output$id_label_summary <- renderText({ 
-        "Summary delay ranges (Y-axis). Outlier = value out of the range [lower, upper]."
+        "Scatterplot shows delay time and  battery of the device grouped by scheduler type." 
+        # Summary delay ranges (Y-axis). Outlier = value out of the range [lower, upper]."
     })
     
     output$id_table <- renderTable({means},
@@ -132,7 +133,8 @@ server <- function(input, output) {
         time_end <- max(selection()$plan_date)
         time_elapsed <- interval(time_start, time_end)
 
-        title <- paste0(selection()$device_desc)
+        # title <- paste0(selection()$device_desc)
+        title <- selection()$device_name
                       
         subtitle <- paste("[Selected interval]",
                            "From", time_start,
@@ -153,7 +155,7 @@ server <- function(input, output) {
         palette <- c("daytime"="#66CC99", "nighttime"="#9999CC") #  #CC6666
     
         p <- switch (input$selected_grouping,
-            "1" = ggplot(selection(), aes(x = plan_date)),
+            "1" = ggplot(selection(), aes(x = plan_date, color=factor(scheduler))),
             "2" = ggplot(selection(), aes(x = plan_date, color=factor(time_period))),
             "3" = ggplot(selection(), aes(x = plan_date, color=factor(plan_day)))
         )
@@ -178,6 +180,14 @@ server <- function(input, output) {
             scale_y_continuous(name="delay [seconds]", breaks=ybks_delay, limits=ylim_delay,
                                sec.axis=sec_axis(~./scalefactor, breaks=ybks_battery, name="battery [%]"))
              
+        if (input$selected_grouping=="1") {
+            p <- p +
+                guides(color=guide_legend(title="Scheduler",
+                                          override.aes=list(fill=NA),
+                                          nrow=2)) +
+                theme(legend.position="top")
+        }
+        
         if (input$selected_grouping=="2") {
             p <- p +
                 scale_color_manual(values = palette,

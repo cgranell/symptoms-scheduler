@@ -19,18 +19,18 @@ max_date = end_date + days(1)
   
 # Summary table
 
-means <- 
-  data %>% 
-  group_by(device_id, device_desc) %>%
-  summarise(mean = round(mean(delay), 3),
-            sd = round(sd(delay), 3),
-            lo = round(mean - 2*sd, 3),
-            hi = round(mean + 2*sd, 3)) %>%
-  select(`Device ID`= device_id,
-         `Description`= device_desc,
-         `Delay mean (mean)` = mean,
-         `Standard deviation (sd)` = sd,
-         `Lower limit (mean - 2*sd)` = lo,
-         `Upper limit (mean + 2*st)`= hi)
+# means <- 
+#   data %>% 
+#   group_by(device_id, device_desc) %>%
+#   summarise(mean = round(mean(delay), 3),
+#             sd = round(sd(delay), 3),
+#             lo = round(mean - 2*sd, 3),
+#             hi = round(mean + 2*sd, 3)) %>%
+#   select(`Device ID`= device_id,
+#          `Description`= device_desc,
+#          `Delay mean (mean)` = mean,
+#          `Standard deviation (sd)` = sd,
+#          `Lower limit (mean - 2*sd)` = lo,
+#          `Upper limit (mean + 2*st)`= hi)
  
 
