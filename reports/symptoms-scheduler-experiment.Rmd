@@ -8,7 +8,7 @@ output:
     toc: yes
 ---
 
-```{r setup, include=FALSE, eval=FALSE}
+```{r setup, include=FALSE, eval=TRUE}
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
@@ -45,6 +45,7 @@ library(googledrive)
 library(lubridate)
 library(stringr)
 library(scales)
+library(plotly)
 ```
 
 
@@ -118,36 +119,13 @@ source(here::here("R", "02_merge_datafiles.R"))
 
 ## Scheduler assessment
 
+
 ```{r load_assessdata, warning=FALSE}
 assessment_file <- here::here("data", "data.rds")
 data <- readRDS(assessment_file)
 
 total_observations <- nrow(data) 
 baseline_delay <- 60
-```
-
-`r scales::comma(total_observations, big.mark = ".")` observations registered in both experiments. Table below shows totla numbers per device. 
- 
-
-```{r gobal_summary_table}
-summaries <- 
-  data %>%
-  group_by(exp_id, device_desc) %>%
-  summarise(`# observations` = n(),
-            `start datetime` = min(plan_date),
-            `end_datetime` = max(plan_date),
-            `mean delay` = first(mean),
-            `sd` = first(sd),
-            `mean - 2sd` = first(lo),
-            `mean + 2sd` = first(hi)) %>%
-  arrange(exp_id, device_desc)
-
-kable(summaries,
-      format = "html",
-      booktabs = TRUE,
-      caption = "Descriptive data per device.") %>%
-  kable_styling(full_width =TRUE)
-
 ```
 
 __Key Variables__:
@@ -168,16 +146,98 @@ __Key Variables__:
   - `exp_id`: experiment identifier.
   - `scheduler`: scheduler type.
   
-#### Distribution of `delay` over `plan_date`
+  
+`r scales::comma(total_observations, big.mark = ".")` observations registered in both experiments. Table below shows total numbers per device. 
+ 
+
+```{r gobal_summary_table}
+summaries <- 
+  data %>%
+  group_by(exp_id, device_desc) %>%
+  summarise(`# observations` = n(),
+            `start datetime` = min(plan_date),
+            `end_datetime` = max(plan_date),
+            `mean delay` = first(mean),
+            `sd` = first(sd),
+            `mean - 2sd` = first(lo),
+            `mean + 2sd` = first(hi)) %>%
+  arrange(exp_id, device_desc)
+
+kable(summaries,
+      format = "html",
+      booktabs = TRUE,
+      caption = "Table. Descriptive data (total, ranges) per device.") %>%
+  kable_styling(full_width =TRUE)
+
+```
+
+
+  
+### Distribution of `delay` over `plan_date`
 
 See [shiny app](https://cgranell.shinyapps.io/symptoms-scheduler/)
 
 
-#### shows a scatterplto to 
+### Boxplots
 
+```{r boxplot_data}
+bp_data_all <- 
+  data %>%
+  filter(plan_month == 4,
+         outlier == "no")
+```
+```{r boxplot_all_faceted, eval=FALSE}
 
-```{r}
+bp_data_all_p  <- 
+  bp_data_all %>%
+  ggplot(aes(x = factor(plan_date), y = delay))+ #, fill=factor(exp_id))) +
+  geom_boxplot(alpha = 0.7)+
+               # outlier.colour = "#1F3552", outlier.shape = 20) +
+  facet_grid(exp_id~device_name)+#, scales = "free_x") +
+  theme_bw() +
+  guides(fill=FALSE)
+
+bp_data_all_p
+
+ggplotly(bp_data_all_p)
 
 ```
+
+
+
+```{r boxplot_all_faceted_plotly, warning=FALSE}
+p <- 
+  bp_data_all %>%
+  plot_ly(y = ~delay, x = ~interaction(scheduler, device_name), 
+          alpha = 0.1, 
+          boxpoints = "suspectedoutliers") %>%
+  add_boxplot(color = ~device_name) %>%
+  layout(xaxis = list(title = " "))
+
+p  
+```
+
+
+
+
+```{r boxplot_scheduler_plotly}
+
+p <-
+  bp_data_all %>%
+  plot_ly(y = ~delay,
+          alpha = 0.1,
+          boxpoints = "suspectedoutliers")
+
+p1 <- p %>% add_boxplot(x = "Overall", name="Overall")
+p2 <- p %>% add_boxplot(x = ~device_name, color=~scheduler)
+
+subplot(
+  p1, p2, shareY = TRUE,
+  widths = c(0.2, 0.8), margin = 0
+) #%>% hide_legend()
+
+
+```
+
 
 

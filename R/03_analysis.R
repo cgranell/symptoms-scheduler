@@ -205,8 +205,7 @@ sel_device <- names(devices)[4]
 
 selection <- 
   data %>%
-  filter(device_id == sel_device,
-         plan_month == 4,
+  filter(plan_month == 4,
          outlier == "no")
 
 fill <- "#4271AE"
@@ -214,11 +213,11 @@ line <- "#1F3552"
 
 p_box <- 
   selection %>%
-  ggplot(aes(x = factor(plan_day), y = delay, fill=factor(exp_id))) +
+  ggplot(aes(x = factor(plan_date), y = delay, fill=factor(exp_id))) +
   geom_boxplot(#fill = fill, colour = line, 
                alpha = 0.7,
                outlier.colour = "#1F3552", outlier.shape = 20) +
-  # facet_wrap(~exp_id, scales = "free_x") +
+  facet_grid(exp_id~device_name, scales = "free_x") +
   theme_bw() +
   guides(fill=FALSE)
   

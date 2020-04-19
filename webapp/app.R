@@ -28,7 +28,7 @@ ui <- fluidPage(
         sidebarPanel(
         
             selectInput(inputId = "selected_device", 
-                        label = "Scheduler - Devices", 
+                        label = "Devices", 
                         choices = devices_lbl),
             
             
@@ -75,7 +75,7 @@ ui <- fluidPage(
                         label = "Smoothing", 
                         choices = c("gam", "loess")),
 
-            width = 3
+            width = 2
             
         ),
         
@@ -164,7 +164,7 @@ server <- function(input, output) {
             geom_point(aes(y = delay), alpha = 0.6, size = 0.7) +
             geom_line(aes(y = battery * scalefactor), color="red", size=0.7) +
             scale_x_datetime(breaks = scales::date_breaks("8 hours"),
-                             labels = scales::date_format("%d-%b\n%H:%M", tz="CET"),
+                             labels = scales::date_format("%d-%m %H:%M", tz="CET"),
                              expand = c(0,0))
         
         if (input$selected_grouping=="1" |
@@ -184,8 +184,7 @@ server <- function(input, output) {
             p <- p +
                 guides(color=guide_legend(title="Scheduler",
                                           override.aes=list(fill=NA),
-                                          nrow=2)) +
-                theme(legend.position="top")
+                                          nrow=2)) 
         }
         
         if (input$selected_grouping=="2") {
@@ -204,18 +203,19 @@ server <- function(input, output) {
         }
 
         p <- p +
-            theme(legend.title = element_text(size=8)) +
+            theme(legend.title = element_text(size=8),
+                  legend.position = "bottom") +
             theme_bw() +
             theme(
                 axis.line.y.right = element_line(color = "red"),
                 axis.ticks.y.right = element_line(color = "red"),
                 axis.text.y.right = element_text(color = "red"),
-                axis.title.y.right = element_text(color = "red")
-
+                axis.title.y.right = element_text(color = "red"),
+                axis.text.x = element_text(size=7, angle=45)
             )
         p
             
-    }, height = 650)
+    }, width = 1400, height = 650)
     
 
  

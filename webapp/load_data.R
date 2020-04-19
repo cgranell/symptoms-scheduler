@@ -6,11 +6,17 @@ data <- readRDS(file_path)
 # file_path <- here::here("data", "data.csv")
 # data <- read_csv(file_path, col_names = TRUE)
 
-devices_lbl <- c("Advanced - BQ Aquaris V" = "BQ",
-                 "Advanced - Nvidia Shield Tablet" = "NV",
-                 "Advanced - Xiaomi Mi A1" = "A1",
-                 "Basic - Honor 9" = "H9",
-                 "Basic - Motorola Moto G" = "MO")
+# devices_lbl <- c("Advanced - BQ Aquaris V" = "BQ",
+#                  "Advanced - Nvidia Shield Tablet" = "NV",
+#                  "Advanced - Xiaomi Mi A1" = "A1",
+#                  "Basic - Honor 9" = "H9",
+#                  "Basic - Motorola Moto G" = "MO")
+
+devices_lbl <- c("BQ Aquaris V" = "BQ",
+                 "Nvidia Shield Tablet" = "NV",
+                 "Xiaomi Mi A1" = "A1",
+                 "Honor 9" = "H9",
+                 "Motorola Moto G" = "MO")
 
 start_date = min(data$plan_date)
 end_date = max(data$plan_date)
