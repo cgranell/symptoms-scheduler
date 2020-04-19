@@ -9,37 +9,28 @@ files_per_experiment <- 5
 files <- tibble(
   experiment = c(rep("#1", files_per_experiment), rep("#2", files_per_experiment)),
   gsheets_name = c("AD_BQ.csv", "AD_NV.csv", "AD_A1.csv", "BA_H9.csv", "BA_MO.csv",
-                   "BA_BQ.csv", "BA_NV.csv", "BA_A1.csv", "AD_H9.csv", "AD_MO.csv")
+                   "BA_BQ.csv", "BA_NV.csv", "BA_A1.csv", "AD_H9.csv", "AD_MO.csv"),
+  gsheets_link = c("https://drive.google.com/open?id=1fP9r0S8ORa689yHRtfCtYQothLuGcCw3",
+                   "https://drive.google.com/open?id=1l-vnaT-Smy0SegArIz5A108-IQ2_jmVV",
+                   "https://drive.google.com/open?id=1gzk1ezN5t5yBv2RnbznUqvalDx97eu3o",
+                   "https://drive.google.com/open?id=1BLXO4Rvz6ppWFJe5oN9Y0hKh__ypofxk",
+                   "https://drive.google.com/open?id=1RizGjKR8QLOdJna7qGPP7dYX9WWAysO4",
+                   "https://drive.google.com/open?id=1rfaooLZ0Up0gNx1SCA92TV1JFxcLU0sk",
+                   "https://drive.google.com/open?id=1_KIXX5FGXv7MO37QbUDnd_KGqiGihiMI",
+                   "https://drive.google.com/open?id=1LezrtyB9i4K7cQsmI78E0v_KaOyhZcXI",
+                   "https://drive.google.com/open?id=1ISjsfSLZt6n9miryQtDr-tsZV9bfbCDT",
+                   "https://drive.google.com/open?id=1bx2RVNz05qVKGr-32GI-ZIOKQWlqKBPz")
 )
 
 
-gfolder_url <- "https://drive.google.com/open?id=11oqV_vZqRDkbMdQ8m2KmAeL3-mOPKClh"
-gdata_path <- drive_get(as_id(gfolder_url))
-
-# Download files corresponding to 'Experiment #1'
-files_exp <- files %>%
-  filter(experiment =="#1") %>%
-  select(gsheets_name)
-
-for (f in 1:files_per_experiment) {
-  gfile_name <-files_exp$gsheets_name[f]
-  gdata_file <- drive_ls(path = gdata_path$name, pattern = gfile_name)
-
-  data_path <- here::here("data-raw", gdata_file$name) # local file
-  drive_download(file = as_id(gdata_file$id), path = data_path, overwrite = TRUE, verbose = TRUE)
-}
-
-# Download files corresponding to 'Experiment #2'
-files_exp <- files %>%
-  filter(experiment =="#2") %>%
-  select(gsheets_name)
-
-for (f in 1:files_per_experiment) {
-  gfile_name <-files_exp$gsheets_name[f]
-  gdata_file <- drive_ls(path = gdata_path$name, pattern = gfile_name)
+for (f in 1:10) {
+  gfile_name <-files$gsheets_name[f]
+  gfile_id <- googledrive::as_id(files$gsheets_link[f])
   
-  data_path <- here::here("data-raw", gdata_file$name) # local file
-  drive_download(file = as_id(gdata_file$id), path = data_path, overwrite = TRUE, verbose = TRUE)
+  drive_download(file = gfile_id, 
+                 path = here::here("data-raw", gfile_name), 
+                 overwrite = TRUE, verbose = TRUE)
+
 }
 
 drive_deauth()

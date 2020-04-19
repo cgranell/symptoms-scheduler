@@ -54,67 +54,153 @@ library(plotly)
 set.seed(nchar("Symptoms - scheduler experiment"))
 ```
 
+## Data download
+
 ```{r gsheetdata_files}
 
-files_per_experiment <- 5
-
 files <- tibble(
-  experiment = c(rep("#1", files_per_experiment), rep("#2", files_per_experiment)),
+  experiment = c(rep("#1", 5), rep("#2", 5)),
   gsheets_name = c("AD_BQ.csv", "AD_NV.csv", "AD_A1.csv", "BA_H9.csv", "BA_MO.csv",
-                   "BA_BQ.csv", "BA_NV.csv", "BA_A1.csv", "AD_H9.csv", "AD_MO.csv")
-  #TODO: issue readinf private files from google drive: files cannot be downloaded    
-  # gsheets_id = c() 
+                   "BA_BQ.csv", "BA_NV.csv", "BA_A1.csv", "AD_H9.csv", "AD_MO.csv"),
+  gsheets_link = c("https://drive.google.com/open?id=1fP9r0S8ORa689yHRtfCtYQothLuGcCw3",
+                   "https://drive.google.com/open?id=1l-vnaT-Smy0SegArIz5A108-IQ2_jmVV",
+                   "https://drive.google.com/open?id=1gzk1ezN5t5yBv2RnbznUqvalDx97eu3o",
+                   "https://drive.google.com/open?id=1BLXO4Rvz6ppWFJe5oN9Y0hKh__ypofxk",
+                   "https://drive.google.com/open?id=1RizGjKR8QLOdJna7qGPP7dYX9WWAysO4",
+                   "https://drive.google.com/open?id=1rfaooLZ0Up0gNx1SCA92TV1JFxcLU0sk",
+                   "https://drive.google.com/open?id=1_KIXX5FGXv7MO37QbUDnd_KGqiGihiMI",
+                   "https://drive.google.com/open?id=1LezrtyB9i4K7cQsmI78E0v_KaOyhZcXI",
+                   "https://drive.google.com/open?id=1ISjsfSLZt6n9miryQtDr-tsZV9bfbCDT",
+                   "https://drive.google.com/open?id=1bx2RVNz05qVKGr-32GI-ZIOKQWlqKBPz")
 )
 ```
 
 
 
-```{r drive_connect, eval=FALSE}
-gfolder_url <- "https://drive.google.com/open?id=11oqV_vZqRDkbMdQ8m2KmAeL3-mOPKClh"
-gdata_path <- drive_get(as_id(gfolder_url))
-```
-
-```{r gsheetdata_exp1_download, eval=FALSE}
-# Download files corresponding to 'Experiment #1'
-files_exp <- files %>%
-  filter(experiment =="#1") %>%
-  select(gsheets_name)
-
-for (f in 1:files_per_experiment) {
-  gfile_name <-files_exp$gsheets_name[f]
-  gdata_file <- drive_ls(path = gdata_path$name, pattern = gfile_name)
-
-  data_path <- here::here("data-raw", gdata_file$name) # local file
-  drive_download(file = as_id(gdata_file$id), path = data_path, overwrite = TRUE, verbose = TRUE)
+```{r gsheetdata_download}
+for (f in 1:nrow(files)) {
+  gfile_name <-files$gsheets_name[f]
+  gfile_id <- googledrive::as_id(files$gsheets_link[f])
+  
+  drive_download(file = gfile_id, 
+                 path = here::here("data-raw", gfile_name), 
+                 overwrite = TRUE, verbose = FALSE)
 }
 
 ```
 
-```{r gsheetdata_exp2_download, eval=FALSE}
-# Download files corresponding to 'Experiment #2'
-files_exp <- files %>%
-  filter(experiment =="#2") %>%
-  select(gsheets_name)
-
-for (f in 1:files_per_experiment) {
-  gfile_name <-files_exp$gsheets_name[f]
-  gdata_file <- drive_ls(path = gdata_path$name, pattern = gfile_name)
-
-  data_path <- here::here("data-raw", gdata_file$name) # local file
-  drive_download(file = as_id(gdata_file$id), path = data_path, overwrite = TRUE, verbose = TRUE)
-}
-
-```
-
-```{r drive_disconnect, eval=FALSE}
+```{r drive_disconnect}
 drive_deauth()
 ```
 
 
 ## Data preparation
 
-```{r merge_datafiles, eval=FALSE}
-source(here::here("R", "02_merge_datafiles.R"))
+
+```{r merge_datafiles}
+
+schedulers <- c("AD" = "Advanced", 
+                "BA" = "Basic")
+
+devices <- c("BQ" = "BQ Aquaris V",
+             "NV" = "Nvidia Shield Tablet",
+             "A1" = "Xiaomi Mi A1",
+             "H9" = "Honor 9",
+             "MO" = "Motorola Moto G")
+
+baseline_delay <- 60
+
+data_path <- here::here("data-raw")
+file_names <- list.files(path  = data_path)
+file_paths <- list.files(path = data_path, full.names = TRUE)
+
+data_merged <- data.frame()
+
+get_experiment_id <- function(filename) {
+  fullname <- paste0(filename, ".csv")
+  files %>%
+    filter(gsheets_name == fullname) %>%
+    select(experiment) %>%
+    pull
+}
+
+for (f in 1:length(file_names)) {
+  filename <- stringr::str_sub(file_names[f], 1, 5)
+  exp_id <- get_experiment_id(filename)
+  
+  parts <- stringr::str_split(filename, "_", simplify = TRUE)
+  
+  scheduler_id = parts[1]
+  scheduler_name <- schedulers[[scheduler_id]]
+  device_id <- parts[2]
+  device_name <- devices[[device_id]]
+  device_desc <- paste0(scheduler_name, " - ", device_name)
+  
+  data_temp <- read_csv(file_paths[f], col_names = TRUE, 
+                        cols(
+                          battery = col_double(),
+                          exec_timestamp = col_double(),
+                          planning_timestamp = col_double(),
+                          task = col_character()
+                        ))
+
+
+  data_temp <- 
+    data_temp %>%
+    mutate(exp_id = exp_id,
+           scheduler = scheduler_name,
+           device_id = device_id,
+           device_name = device_name,
+           device_desc = device_desc) 
+  
+  data_merged <- rbind(data_merged, data_temp)
+}       
+
+
+data_merged <- 
+  data_merged %>%
+  mutate(exec_date = as_datetime(exec_timestamp/1000, tz="Europe/Madrid"),
+         plan_date = as_datetime(planning_timestamp/1000, tz="Europe/Madrid"),
+         plan_hour = lubridate::hour(plan_date),
+         plan_day = lubridate::day(plan_date),
+         plan_month = lubridate::month(plan_date),
+         time_period = ifelse(between(plan_hour,0, 7), "nighttime", "daytime"))
+
+
+# Delay time is in seconds
+data_merged <-
+  data_merged %>%
+  group_by(device_id) %>%
+  arrange(plan_date) %>%
+  mutate(step = row_number(),
+         delay = (as.duration(interval(plan_date, exec_date)) - baseline_delay) / dseconds(1))
+
+
+# Outliers
+means <- 
+  data_merged %>%
+  group_by(device_id) %>%
+  summarise(mean = round(mean(delay), 3),
+            sd = round(sd(delay), 3),
+            lo = round(mean - 2*sd, 3),
+            hi = round(mean + 2*sd, 3))
+
+data_complete <- 
+  left_join(data_merged, means, by="device_id") %>%
+  mutate(outlier = ifelse((delay < lo | delay > hi), "yes", "no")) %>%
+  arrange(device_id, plan_date)
+  
+
+data_path <- here::here("data", "data.csv")
+write_csv(data_complete, data_path)
+data_path <- here::here("data", "data.rds")
+saveRDS(data_complete, data_path)
+
+data_path <- here::here("webapp","data", "data.csv")
+write_csv(data_complete, data_path)
+data_path <- here::here("webapp","data", "data.rds")
+saveRDS(data_complete, data_path)
+
 ```
 
 ## Scheduler assessment
@@ -125,7 +211,6 @@ assessment_file <- here::here("data", "data.rds")
 data <- readRDS(assessment_file)
 
 total_observations <- nrow(data) 
-baseline_delay <- 60
 ```
 
 __Key Variables__:
@@ -175,35 +260,67 @@ kable(summaries,
   
 ### Distribution of `delay` over `plan_date`
 
-See [shiny app](https://cgranell.shinyapps.io/symptoms-scheduler/)
+See the [shiny app](https://cgranell.shinyapps.io/symptoms-scheduler/)!
 
 
-### Boxplots
+### Distribution of `delay` over `battery`
 
+```{r battery_delay_data}
+
+battery_delay_data <-
+  filter(data, outlier == "no") %>%
+  select(exp_id, scheduler, device_id, device_name, battery, delay)
+```
+
+```{r plot_battery_delay, fig.height=10}
+
+p_battery_delay <-
+  battery_delay_data %>%
+  ggplot(aes(x = battery, y =delay)) + 
+  geom_point(aes(color=device_name), alpha = 0.5, size = 0.1) +
+  facet_grid(device_name ~ scheduler, margins = TRUE) +
+  theme_bw() +
+  guides(colour=FALSE)
+
+p_battery_delay 
+
+```
+
+
+
+### (interactive) Boxplots
+
+Basic statistics applied to `delay` and `device_name`. Given a device, _how do the box plots change on each `scheduler`?_
 ```{r boxplot_data}
 bp_data_all <- 
-  data %>%
-  filter(plan_month == 4,
-         outlier == "no")
+  filter(data, outlier == "no") %>%
+  mutate(exp_id = factor(exp_id)) %>%
+  select(exp_id, scheduler, device_id, device_name, plan_date, delay)
+
 ```
-```{r boxplot_all_faceted, eval=FALSE}
+```{r boxplot_all_faceted, fig.height=6, fig.width=5}
 
 bp_data_all_p  <- 
   bp_data_all %>%
-  ggplot(aes(x = factor(plan_date), y = delay))+ #, fill=factor(exp_id))) +
-  geom_boxplot(alpha = 0.7)+
-               # outlier.colour = "#1F3552", outlier.shape = 20) +
-  facet_grid(exp_id~device_name)+#, scales = "free_x") +
+  ggplot(aes(x = plan_date, y = delay, fill=exp_id)) + #, fill=factor(exp_id))) +
+  geom_boxplot(alpha = 0.7,
+               outlier.colour = "#1F3552", outlier.shape = 20) +
+  facet_grid(device_name ~ scheduler) +
   theme_bw() +
-  guides(fill=FALSE)
+  scale_fill_hue()
+  # guides(fill=FALSE)
 
 bp_data_all_p
 
-ggplotly(bp_data_all_p)
 
 ```
 
 
+```{r}
+
+# ggplotly(bp_data_all_p)
+```
+ 
 
 ```{r boxplot_all_faceted_plotly, warning=FALSE}
 p <- 
