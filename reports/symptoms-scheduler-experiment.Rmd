@@ -1,6 +1,6 @@
 ---
 title: "Symptoms - scheduler experiment"
-author: "Carlos Granell, SyMptOMS team, [GEOTEC research group](http://geotec.uji.es/) "
+author: "Carlos Granell, [SyMptOMS team](http://geotec.uji.es/projects/SyMptOMS/), [GEOTEC research group](http://geotec.uji.es/) "
 date: "17/4/2020 (updated `r format(Sys.time(), '%d %B, %Y')`)"
 output: 
   html_document:
@@ -12,7 +12,7 @@ output:
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
-This document analyses the self-developed sheduler componnet in Android-based mobile devices as part of the [SyMptOMS project](http://geotec.uji.es/projects/SyMptOMS/). 
+This document analyses the self-developed scheduler component in Android-based mobile devices as part of the [SyMptOMS project](http://geotec.uji.es/projects/SyMptOMS/). 
 
 
 ## Reproduce paper
@@ -280,6 +280,9 @@ kable(outliers,
   kable_styling(full_width =TRUE)
 ```
 
+`Basic - BQ Aquaris V` and `Basic - Nvidia Shield Tablet` do not show outliers! 
+
+Some devices present quite distint numbers of outliers dependinng on the scheduler.  
   
 ### Distribution of `delay` over `plan_date`
 
