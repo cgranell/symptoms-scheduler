@@ -23,7 +23,7 @@ files <- tibble(
 )
 
 
-for (f in 1:10) {
+for (f in 1:nrow(files)) {
   gfile_name <-files$gsheets_name[f]
   gfile_id <- googledrive::as_id(files$gsheets_link[f])
   

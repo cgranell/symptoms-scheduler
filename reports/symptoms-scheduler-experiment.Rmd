@@ -203,16 +203,6 @@ saveRDS(data_complete, data_path)
 
 ```
 
-## Scheduler assessment
-
-
-```{r load_assessdata, warning=FALSE}
-assessment_file <- here::here("data", "data.rds")
-data <- readRDS(assessment_file)
-
-total_observations <- nrow(data) 
-```
-
 __Key Variables__:
 
 - quantitative (interval)
@@ -231,9 +221,21 @@ __Key Variables__:
   - `exp_id`: experiment identifier.
   - `scheduler`: scheduler type.
   
-  
-`r scales::comma(total_observations, big.mark = ".")` observations registered in both experiments. Table below shows total numbers per device. 
- 
+
+## Scheduler assessment
+
+
+```{r load_assessdata, warning=FALSE}
+assessment_file <- here::here("data", "data.rds")
+data <- readRDS(assessment_file)
+
+n_observations <- nrow(data) 
+
+```
+
+`r scales::comma(n_observations, big.mark = ".")` observations registered in both experiments. Table below summarises ranges and total numbers per device. 
+
+
 
 ```{r gobal_summary_table}
 summaries <- 
@@ -256,6 +258,27 @@ kable(summaries,
 
 ```
 
+```{r outliers}
+n_outliers <- nrow(filter(data, outlier=="yes"))
+
+
+```
+
+`r round((n_outliers / n_observations)*100, 1)`% (`r scales::comma(n_outliers, big.mark = ".")`/`r scales::comma(n_observations, big.mark = ".")`) of outliers. Outlier breakdown below. 
+
+```{r outliers_table}
+
+outliers <- 
+  filter(data, outlier=="yes") %>%
+  group_by(scheduler, device_name) %>%
+  summarise(`# outliers` = n())
+
+kable(outliers,
+      format = "html",
+      booktabs = TRUE,
+      caption = "Table. Outliers total per sheduler/device.") %>%
+  kable_styling(full_width =TRUE)
+```
 
   
 ### Distribution of `delay` over `plan_date`
@@ -263,7 +286,7 @@ kable(summaries,
 See the [shiny app](https://cgranell.shinyapps.io/symptoms-scheduler/)!
 
 
-### Distribution of `delay` over `battery`
+### Distribution of `delay` over `battery` (without outliers)
 
 ```{r battery_delay_data}
 
@@ -288,7 +311,7 @@ p_battery_delay
 
 
 
-### (interactive) Boxplots
+### Boxplots
 
 Basic statistics applied to `delay` and `device_name`. Given a device, _how do the box plots change on each `scheduler`?_
 ```{r boxplot_data}
