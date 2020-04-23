@@ -28,8 +28,10 @@ for (f in 1:nrow(files)) {
   gfile_id <- googledrive::as_id(files$gsheets_link[f])
   
   drive_download(file = gfile_id, 
-                 path = here::here("data-raw", gfile_name), 
-                 overwrite = TRUE, verbose = TRUE)
+                 path = here::here("data-raw", gfile_name),
+                 type = "csv",
+                 overwrite = TRUE, 
+                 verbose = TRUE)
 
 }
 

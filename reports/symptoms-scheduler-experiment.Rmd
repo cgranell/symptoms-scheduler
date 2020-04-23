@@ -46,6 +46,9 @@ library(lubridate)
 library(stringr)
 library(scales)
 library(plotly)
+library(grid)
+library(gridBase)
+library(gridExtra)
 ```
 
 
@@ -77,7 +80,7 @@ files <- tibble(
 
 
 
-```{r gsheetdata_download}
+```{r gsheetdata_download, eval=FALSE}
 for (f in 1:nrow(files)) {
   gfile_name <-files$gsheets_name[f]
   gfile_id <- googledrive::as_id(files$gsheets_link[f])
@@ -89,15 +92,14 @@ for (f in 1:nrow(files)) {
 
 ```
 
-```{r drive_disconnect}
+```{r drive_disconnect, eval=FALSE}
 drive_deauth()
 ```
 
 
 ## Data preparation
 
-
-```{r merge_datafiles}
+```{r merge_datafiles_defs}
 
 schedulers <- c("AD" = "Advanced", 
                 "BA" = "Basic")
@@ -109,6 +111,10 @@ devices <- c("BQ" = "BQ Aquaris V",
              "MO" = "Motorola Moto G")
 
 baseline_delay <- 60
+```
+
+
+```{r merge_datafiles, eval=FALSE}
 
 data_path <- here::here("data-raw")
 file_names <- list.files(path  = data_path)
@@ -233,14 +239,18 @@ n_observations <- nrow(data)
 
 ```
 
-`r scales::comma(n_observations, big.mark = ".")` observations registered in both experiments. Table below summarises ranges and total numbers per device. 
+**Observations**
+
+- `r scales::comma(n_observations, big.mark = ".")` observations registered in both experiments. Table above summarises ranges and total numbers per device. 
+- `r devices["NV"]` has stopped triggering alarms on  **2020-04-17 22:27:06** when running the basic scheduler. Since there's no _watchdog_ in the basic version, this device is not going to trigger alarms anymore. Died!
+
 
 
 
 ```{r gobal_summary_table}
 summaries <- 
   data %>%
-  group_by(exp_id, device_desc) %>%
+  group_by(exp_id, scheduler, device_name) %>%
   summarise(`# observations` = n(),
             `start datetime` = min(plan_date),
             `end_datetime` = max(plan_date),
@@ -248,41 +258,71 @@ summaries <-
             `sd` = first(sd),
             `mean - 2sd` = first(lo),
             `mean + 2sd` = first(hi)) %>%
-  arrange(exp_id, device_desc)
+  arrange(exp_id, scheduler, device_name)
 
 kable(summaries,
       format = "html",
       booktabs = TRUE,
       caption = "Table. Descriptive data (total, ranges) per device.") %>%
-  kable_styling(full_width =TRUE)
+  kable_styling(full_width =TRUE) %>%
+  row_spec(9, color = "white", background = "#D7261E")
 
 ```
+
+
+
+
+
+### Outliers
 
 ```{r outliers}
 n_outliers <- nrow(filter(data, outlier=="yes"))
 
-
 ```
 
-`r round((n_outliers / n_observations)*100, 1)`% (`r scales::comma(n_outliers, big.mark = ".")`/`r scales::comma(n_observations, big.mark = ".")`) of outliers. Outlier breakdown below. 
+**Observations**:
 
-```{r outliers_table}
+- `r round((n_outliers / n_observations)*100, 1)`% (`r scales::comma(n_outliers, big.mark = ".")`/`r scales::comma(n_observations, big.mark = ".")`) of outliers. Outlier breakdown below. 
+
+- `Basic - Nvidia Shield Tablet` does not show outliers! 
+
+- uneven distrintio of outliers per device!
+
+
+
+```{r outliers_table_plot}
 
 outliers <- 
   filter(data, outlier=="yes") %>%
   group_by(scheduler, device_name) %>%
-  summarise(`# outliers` = n())
+  summarise(`# outliers` = n()) %>%
+  arrange(device_name)
 
 kable(outliers,
       format = "html",
       booktabs = TRUE,
       caption = "Table. Outliers total per sheduler/device.") %>%
-  kable_styling(full_width =TRUE)
+  kable_styling(full_width =FALSE,  position = "left")
+
+
+ggplot(outliers) +
+  geom_bar(aes(x=device_name, y=`# outliers`, fill=scheduler), stat = 'identity', position = position_dodge(preserve = 'single')) +
+  theme_bw()
+
+  # frame() # thx to https://stackoverflow.com/a/25194694/261210
+  # vps <- baseViewports()
+  # pushViewport(vps$inner, vps$figure, vps$plot)
+  # grid.table(outliers,
+  #            theme = ttheme_minimal(base_size = 11,
+  #                                   padding = unit(c(10,5), "pt"))
+  #            )
+  # popViewport(3)
+
+
 ```
 
-`Basic - BQ Aquaris V` and `Basic - Nvidia Shield Tablet` do not show outliers! 
 
-Some devices present quite distint numbers of outliers dependinng on the scheduler.  
+
   
 ### Distribution of `delay` over `plan_date`
 
@@ -293,18 +333,23 @@ See the [shiny app](https://cgranell.shinyapps.io/symptoms-scheduler/)!
 
 ```{r battery_delay_data}
 
+scheduler_levels = c("Advanced", "Basic")
+devices_levels = as.vector(devices)
+
 battery_delay_data <-
   filter(data, outlier == "no") %>%
-  select(exp_id, scheduler, device_id, device_name, battery, delay)
+  select(exp_id, scheduler, device_id, device_name, battery, delay) %>%
+  mutate(scheduler = factor(scheduler, levels = scheduler_levels),
+         device_name = factor(device_name, levels=devices_levels))
 ```
 
-```{r plot_battery_delay, fig.height=10}
+```{r plot_battery_delay, fig.height=10, fig.width=12, warning=FALSE}
 
 p_battery_delay <-
   battery_delay_data %>%
-  ggplot(aes(x = battery, y =delay)) + 
-  geom_point(aes(color=device_name), alpha = 0.5, size = 0.1) +
-  facet_grid(device_name ~ scheduler, margins = TRUE) +
+  ggplot(aes(x = battery, y = delay)) + 
+  geom_point(aes(color=device_name), alpha = 0.5, size = 0.4) +
+  facet_grid(device_name ~ scheduler) +
   theme_bw() +
   guides(colour=FALSE)
 
