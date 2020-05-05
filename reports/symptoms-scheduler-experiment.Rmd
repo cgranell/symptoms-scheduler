@@ -269,6 +269,12 @@ kable(summaries,
 
 ```
 
+```{r}
+stats <- data %>% filter(exp_id=="#1", device_name=="BQ Aquaris V") %>% select(delay)
+ summary(stats)
+#TODO: ERROR EN EL CALCUALO DE LAS MEDIAS
+
+```
 
 
 
