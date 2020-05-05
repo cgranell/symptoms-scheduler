@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = FALSE)
 This document analyses the self-developed scheduler component in Android-based mobile devices as part of the [SyMptOMS project](http://geotec.uji.es/projects/SyMptOMS/). 
 
 
-## Reproduce paper
+## Reproduce notebook
 
 To create the PDF of the computational notebook you can run the following commands in a new R session.
 If you have problems rendering the PDF you can execute each chunk independently in [RStudio](https://rstudio.com/products/rstudio/).
@@ -202,6 +202,7 @@ write_csv(data_complete, data_path)
 data_path <- here::here("data", "data.rds")
 saveRDS(data_complete, data_path)
 
+#TODO: 
 # data_path <- here::here("webapp","data", "data.csv")
 # write_csv(data_complete, data_path)
 # data_path <- here::here("webapp","data", "data.rds")
@@ -228,7 +229,7 @@ __Key Variables__:
   - `scheduler`: scheduler type.
   
 
-## Scheduler assessment
+## Exploratory analysis
 
 
 ### Distribution of the data
@@ -333,13 +334,13 @@ n_irq <- nrow(filter(data, outlier == 0 & whisker == 0))
 
 **Observations**:
 
-- `r scales::comma(n_observations, big.mark = ".")` observations in total. 
+- `r scales::comma(n_observations, big.mark = ".")` records in total. 
 
-- `r round((n_irq / n_observations)*100, 1)`% (`r scales::comma(n_irq, big.mark = ".")`/`r scales::comma(n_observations, big.mark = ".")`) represents the middle 50% of the data, i.e. the interquartile range or [IQR](https://en.wikipedia.org/wiki/Interquartile_range)
+- `r round((n_irq / n_observations)*100, 1)`% (`r scales::comma(n_irq, big.mark = ".")`/`r scales::comma(n_observations, big.mark = ".")`) is the interquartile range or [IQR](https://en.wikipedia.org/wiki/Interquartile_range), i.e. the middle 50% of the data.
 
-- `r round((n_whisker / n_observations)*100, 1)`% (`r scales::comma(n_whisker, big.mark = ".")`/`r scales::comma(n_observations, big.mark = ".")`) of whisker values, i.e. the reasonable extremes of the data. That is, these are the minimum and maximum values that do not exceed 1.5 × IQR.
+- `r round((n_whisker / n_observations)*100, 1)`% (`r scales::comma(n_whisker, big.mark = ".")`/`r scales::comma(n_observations, big.mark = ".")`) represent the _reasonable_ extremes of the data, i.e. these whisker values are the minimum and maximum values that do not exceed 1.5 × IQR.
 
-- `r round((n_outliers / n_observations)*100, 1)`% (`r scales::comma(n_outliers, big.mark = ".")`/`r scales::comma(n_observations, big.mark = ".")`) of outliers, i.e.beyond the whiskers.
+- `r round((n_outliers / n_observations)*100, 1)`% (`r scales::comma(n_outliers, big.mark = ".")`/`r scales::comma(n_observations, big.mark = ".")`) are outliers, i.e. values beyond the top and bottom whiskers.
 
 - `Nvidia Shield Tablet` has stopped triggering alarms on  **2020-04-17 22:27:06** when running the basic scheduler. Since there's no _watchdog_ in the basic version, this device is not going to trigger alarms anymore. Died!
 
@@ -351,19 +352,24 @@ n_irq <- nrow(filter(data, outlier == 0 & whisker == 0))
 outliers <- 
   filter(data, outlier==1) %>%
   group_by(exp_id, scheduler, device_name) %>%
-  summarise(`# outliers` = n()) %>%
-  # select (exp_id, scheduler, device_name, delay) %>%
-  arrange(exp_id, device_name)
+  summarise(n = n()) %>%
+  arrange(device_name, scheduler, exp_id)
 
-kable(outliers,
+kable(outliers %>%
+        select(`Device` = device_name, 
+               `# exp` = exp_id,
+               `Type scheduler` = scheduler,
+               `# outliers` = n),
       format = "html",
       booktabs = TRUE,
-      caption = "Table. Outliers total per sheduler/device.") %>%
-  kable_styling(full_width =FALSE,  position = "left")
+      caption = "Table. Outliers per scheduler/device.") %>%
+  kable_styling(full_width =FALSE,position = "left", bootstrap_options = c("striped", "bordered", "condensed")) %>%
+  collapse_rows(columns = 1, valign = "middle") %>%
+  row_spec(c(8,10), color = "white", background = "#D7261E")
 
 
 ggplot(outliers) +
-  geom_bar(aes(x=device_name, y=`# outliers`, fill=scheduler), stat = 'identity', position = position_dodge(preserve = 'single')) +
+  geom_bar(aes(x=device_name, y=n, fill=scheduler), stat = 'identity', position = position_dodge(preserve = 'single')) +
   theme_bw()
 
   # frame() # thx to https://stackoverflow.com/a/25194694/261210
@@ -430,9 +436,8 @@ bp_data_all <-
   select(exp_id, scheduler, device_id, device_name, plan_date, delay)
 ```
 
-```{r boxplot_paired, fig.height=6, fig.width=8}
+```{r boxplot_paired, fig.height=6, fig.width=8, eval=FALSE}
 
-p <- 
 filter(bp_data_all, exp_id=="#1") %>%
   ggplot(aes(x = device_id, y = delay, fill=device_id)) + #, fill=factor(exp_id))) +
   geom_boxplot(alpha = 0.7,
