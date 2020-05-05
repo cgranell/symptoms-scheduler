@@ -183,18 +183,18 @@ data_merged <-
 
 
 # Outliers
-means <- 
-  data_merged %>%
-  group_by(device_id) %>%
-  summarise(mean = round(mean(delay), 3),
-            sd = round(sd(delay), 3),
-            lo = round(mean - 2*sd, 3),
-            hi = round(mean + 2*sd, 3))
-
-data_complete <- 
-  left_join(data_merged, means, by="device_id") %>%
-  mutate(outlier = ifelse((delay < lo | delay > hi), "yes", "no")) %>%
-  arrange(device_id, plan_date)
+# means <- 
+#   data_merged %>%
+#   group_by(device_id) %>%
+#   summarise(mean = round(mean(delay), 3),
+#             sd = round(sd(delay), 3),
+#             lo = round(mean - 2*sd, 3),
+#             hi = round(mean + 2*sd, 3))
+# 
+# data_complete <- 
+#   left_join(data_merged, means, by="device_id") %>%
+#   mutate(outlier = ifelse((delay < lo | delay > hi), "yes", "no")) %>%
+#   arrange(device_id, plan_date)
   
 
 data_path <- here::here("data", "data.csv")
@@ -202,10 +202,10 @@ write_csv(data_complete, data_path)
 data_path <- here::here("data", "data.rds")
 saveRDS(data_complete, data_path)
 
-data_path <- here::here("webapp","data", "data.csv")
-write_csv(data_complete, data_path)
-data_path <- here::here("webapp","data", "data.rds")
-saveRDS(data_complete, data_path)
+# data_path <- here::here("webapp","data", "data.csv")
+# write_csv(data_complete, data_path)
+# data_path <- here::here("webapp","data", "data.rds")
+# saveRDS(data_complete, data_path)
 
 ```
 
@@ -231,6 +231,8 @@ __Key Variables__:
 ## Scheduler assessment
 
 
+### Distribution of the data
+
 ```{r load_assessdata, warning=FALSE}
 assessment_file <- here::here("data", "data.rds")
 data <- readRDS(assessment_file)
@@ -239,70 +241,119 @@ n_observations <- nrow(data)
 
 ```
 
-**Observations**
-
-- `r scales::comma(n_observations, big.mark = ".")` observations registered in both experiments. Table above summarises ranges and total numbers per device. 
-- `r devices["NV"]` has stopped triggering alarms on  **2020-04-17 22:27:06** when running the basic scheduler. Since there's no _watchdog_ in the basic version, this device is not going to trigger alarms anymore. Died!
-
-
-
 
 ```{r gobal_summary_table}
-summaries <- 
-  data %>%
-  group_by(exp_id, scheduler, device_name) %>%
-  summarise(`# observations` = n(),
-            `start datetime` = min(plan_date),
-            `end_datetime` = max(plan_date),
-            `mean delay` = first(mean),
-            `sd` = first(sd),
-            `mean - 2sd` = first(lo),
-            `mean + 2sd` = first(hi)) %>%
-  arrange(exp_id, scheduler, device_name)
 
-kable(summaries,
+# https://towardsdatascience.com/understanding-boxplots-5e2df7bcbd51
+# Understanding Boxplot. What is a outlier?
+# Min., 1st Qu., Median, Mean, 3rd Qu., Max.
+
+col_names <- c("scheduler", "device_name", "min", "quartile1", "median", "quartile3", "max", "mean", "bottom_whisker", "top_whisker")
+summaries <- data.frame(matrix(ncol=length(col_names), nrow = 0))
+colnames(summaries) <- col_names
+
+for (s in 1:length(schedulers)) {
+  for (d in 1:length(devices)) {
+    data %>%
+      filter(scheduler==schedulers[[s]]) %>%
+      filter(device_name==devices[[d]]) %>%
+      select(device_id, device_name, delay) -> one
+    # cat(nrow(single),"\n")
+    summary_row <- data.frame(matrix(ncol=length(col_names), nrow = 0))
+    colnames(summary_row) <- col_names
+    
+    mean <- mean(one$delay)
+    summary_boxplot <- boxplot(one$delay, plot = FALSE) 
+    bottom_whisker <- summary_boxplot$stats[1,1]
+    top_whisker <-  summary_boxplot$stats[5,1]
+    
+    summary_row[1,] <- c(schedulers[[s]], devices[[d]], fivenum(one$delay), mean, bottom_whisker, top_whisker)
+
+    summaries <- rbind(summaries, summary_row)
+  }
+}
+
+summaries <- 
+  summaries %>%
+  mutate_at(vars(c("scheduler", "device_name")), ~as.character(.)) %>% 
+  mutate_at(vars(-c("scheduler", "device_name")), ~as.numeric(.)) %>%
+  mutate_if(is.numeric, ~round(., 3))
+
+# glimpse(summaries)
+
+data %>%
+  group_by(exp_id, scheduler, device_name) %>%
+  summarise(n = n(),
+            start_datetime = min(plan_date),
+            end_datetime = max(plan_date)) %>%
+  inner_join(summaries, by=c("scheduler", "device_name")) %>%
+  arrange(exp_id, scheduler, device_name) -> stats_summaries
+
+kable(stats_summaries %>%
+        select(`# exp` = exp_id,
+               `Type scheduler` = scheduler,
+               `Device` = device_name,
+               `# records` = n,
+               `Start` = start_datetime,
+               `End` = end_datetime,
+               `Min` = min,
+               `Bottom whisker`= bottom_whisker,
+               `1st Qu.` = quartile1,
+               `Median` = median,
+               `Mean` = mean,
+               `3rd Qu.` = quartile3,
+               `Top whisker`= top_whisker,
+               `Max` = max),
       format = "html",
       booktabs = TRUE,
       caption = "Table. Descriptive data (total, ranges) per device.") %>%
-  kable_styling(full_width =TRUE) %>%
-  row_spec(9, color = "white", background = "#D7261E")
-
-```
-
-```{r}
-stats <- data %>% filter(exp_id=="#1", device_name=="BQ Aquaris V") %>% select(delay)
- summary(stats)
-#TODO: ERROR EN EL CALCUALO DE LAS MEDIAS
+  kable_styling(full_width = TRUE, bootstrap_options = c("striped", "bordered", "condensed")) %>%
+  collapse_rows(columns = 1:2, valign = "top") %>%
+  row_spec(9:10, color = "white", background = "#D7261E")
 
 ```
 
 
-
-
-### Outliers
 
 ```{r outliers}
-n_outliers <- nrow(filter(data, outlier=="yes"))
+
+data %>% 
+  left_join(summaries, by=c("scheduler", "device_name")) %>%
+  mutate(outlier = ifelse((delay < bottom_whisker | delay > top_whisker), 1, 0)) %>%
+  mutate(whisker = ifelse((delay > bottom_whisker & delay < quartile1) | (delay > quartile3 & delay < top_whisker), 1, 0)) %>%
+  select(-min,-bottom_whisker, -quartile1, -mean, -median, -quartile3, -top_whisker, -max) %>%
+  arrange(device_id, plan_date) -> data
+
+
+n_outliers <- nrow(filter(data, outlier == 1))
+n_whisker <- nrow(filter(data, whisker == 1))
+n_irq <- nrow(filter(data, outlier == 0 & whisker == 0))
 
 ```
 
 **Observations**:
 
-- `r round((n_outliers / n_observations)*100, 1)`% (`r scales::comma(n_outliers, big.mark = ".")`/`r scales::comma(n_observations, big.mark = ".")`) of outliers. Outlier breakdown below. 
+- `r scales::comma(n_observations, big.mark = ".")` observations in total. 
 
-- `Basic - Nvidia Shield Tablet` does not show outliers! 
+- `r round((n_irq / n_observations)*100, 1)`% (`r scales::comma(n_irq, big.mark = ".")`/`r scales::comma(n_observations, big.mark = ".")`) represents the middle 50% of the data, i.e. the interquartile range or [IQR](https://en.wikipedia.org/wiki/Interquartile_range)
 
-- uneven distrintio of outliers per device!
+- `r round((n_whisker / n_observations)*100, 1)`% (`r scales::comma(n_whisker, big.mark = ".")`/`r scales::comma(n_observations, big.mark = ".")`) of whisker values, i.e. the reasonable extremes of the data. That is, these are the minimum and maximum values that do not exceed 1.5 × IQR.
 
+- `r round((n_outliers / n_observations)*100, 1)`% (`r scales::comma(n_outliers, big.mark = ".")`/`r scales::comma(n_observations, big.mark = ".")`) of outliers, i.e.beyond the whiskers.
+
+- `Nvidia Shield Tablet` has stopped triggering alarms on  **2020-04-17 22:27:06** when running the basic scheduler. Since there's no _watchdog_ in the basic version, this device is not going to trigger alarms anymore. Died!
+
+- `Xiaomi Mi A1` has stopped triggering alarms on **2020-04-23 00:52:00** when running the basic scheduler. 
 
 
 ```{r outliers_table_plot}
 
 outliers <- 
-  filter(data, outlier=="yes") %>%
-  group_by(scheduler, device_name) %>%
+  filter(data, outlier==1) %>%
+  group_by(exp_id, scheduler, device_name) %>%
   summarise(`# outliers` = n()) %>%
-  arrange(device_name)
+  # select (exp_id, scheduler, device_name, delay) %>%
+  arrange(exp_id, device_name)
 
 kable(outliers,
       format = "html",
@@ -332,18 +383,18 @@ ggplot(outliers) +
   
 ### Distribution of `delay` over `plan_date`
 
-See the [shiny app](https://cgranell.shinyapps.io/symptoms-scheduler/)!
+See the [shiny app](https://cgranell.shinyapps.io/symptoms-scheduler/)! (TO BE UPDATED)
 
 
 ### Distribution of `delay` over `battery` (without outliers)
 
-```{r battery_delay_data}
+```{r battery_delay_data, eval=TRUE}
 
 scheduler_levels = c("Advanced", "Basic")
 devices_levels = as.vector(devices)
 
 battery_delay_data <-
-  filter(data, outlier == "no") %>%
+  filter(data, outlier == 0) %>%
   select(exp_id, scheduler, device_id, device_name, battery, delay) %>%
   mutate(scheduler = factor(scheduler, levels = scheduler_levels),
          device_name = factor(device_name, levels=devices_levels))
@@ -367,15 +418,39 @@ p_battery_delay
 
 ### Boxplots
 
+
+Distribution of data based on a five number summary (“minimum”, first quartile (Q1), median, third quartile (Q3), and “maximum”).
+
 Basic statistics applied to `delay` and `device_name`. Given a device, _how do the box plots change on each `scheduler`?_
 ```{r boxplot_data}
 bp_data_all <- 
-  filter(data, outlier == "no") %>%
+  data %>%
+  # filter(data, outlier == "no") %>%
   mutate(exp_id = factor(exp_id)) %>%
   select(exp_id, scheduler, device_id, device_name, plan_date, delay)
+```
+
+```{r boxplot_paired, fig.height=6, fig.width=8}
+
+p <- 
+filter(bp_data_all, exp_id=="#1") %>%
+  ggplot(aes(x = device_id, y = delay, fill=device_id)) + #, fill=factor(exp_id))) +
+  geom_boxplot(alpha = 0.7,
+               outlier.colour = "#1F3552", outlier.shape = 20) +
+  # facet_grid(~device_name) +
+  theme_bw() +
+  # scale_fill_hue() +
+  guides(fill=FALSE)
+
+boxplot(bp_data_all$delay ~ bp_data_all$device_id)
 
 ```
-```{r boxplot_all_faceted, fig.height=6, fig.width=5}
+
+
+
+
+
+```{r boxplot_all_faceted, fig.height=6, fig.width=8, eval=FALSE}
 
 bp_data_all_p  <- 
   bp_data_all %>%
@@ -399,7 +474,7 @@ bp_data_all_p
 ```
  
 
-```{r boxplot_all_faceted_plotly, warning=FALSE}
+```{r boxplot_all_faceted_plotly, warning=FALSE, eval=FALSE}
 p <- 
   bp_data_all %>%
   plot_ly(y = ~delay, x = ~interaction(scheduler, device_name), 
@@ -414,7 +489,7 @@ p
 
 
 
-```{r boxplot_scheduler_plotly}
+```{r boxplot_scheduler_plotly, eval=FALSE}
 
 p <-
   bp_data_all %>%

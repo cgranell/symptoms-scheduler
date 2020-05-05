@@ -1,4 +1,3 @@
-
 library(here)
 library(tidyverse)
 library(lubridate)
@@ -80,9 +79,7 @@ for (f in 1:length(file_names)) {
 
 data_merged <- 
   data_merged %>%
-  mutate(#exec_date = as_datetime(exec_timestamp/1000),
-         #plan_date = as_datetime(planning_timestamp/1000),
-         exec_date = as_datetime(exec_timestamp/1000, tz="Europe/Madrid"),
+  mutate(exec_date = as_datetime(exec_timestamp/1000, tz="Europe/Madrid"),
          plan_date = as_datetime(planning_timestamp/1000, tz="Europe/Madrid"),
          plan_hour = lubridate::hour(plan_date),
          plan_day = lubridate::day(plan_date),
@@ -96,34 +93,38 @@ data_merged <-
   group_by(device_id) %>%
   arrange(plan_date) %>%
   mutate(step = row_number(),
-         delay = (as.duration(interval(plan_date, exec_date)) - baseline_delay) / dseconds(1))
+         delay = (as.duration(interval(plan_date, exec_date)) - baseline_delay) / dseconds(1),
+         delay = round(delay, 3))
 
+#TODO: handle outliers in notebooks To update shiny app
 
 # Outliers
-means <- 
-  data_merged %>%
-  group_by(device_id) %>%
-  summarise(mean = round(mean(delay), 3),
-            sd = round(sd(delay), 3),
-            lo = round(mean - 2*sd, 3),
-            hi = round(mean + 2*sd, 3))
-
-data_complete <- 
-  left_join(data_merged, means, by="device_id") %>%
-  mutate(outlier = ifelse((delay < lo | delay > hi), "yes", "no")) %>%
-  arrange(device_id, plan_date)
-  
+# means <- 
+#   data_merged %>%
+#   group_by(exp_id, device_id) %>%
+#   summarise(mean = round(mean(delay), 3),
+#             median= round(median(delay), 3),
+#             sd = round(sd(delay), 3),
+#             # lo = round(mean - 2*sd, 3),
+#             # hi = round(mean + 2*sd, 3),
+#             lo = round(mean - 2*sd, 3),
+#             hi = round(mean + 2*sd, 3)
+#             )
+# 
+# data_complete <- 
+#   left_join(data_merged, means, by="device_id") %>%
+#   mutate(outlier = ifelse((delay < lo | delay > hi), "yes", "no")) %>%
+#   arrange(device_id, plan_date)
+data_complete <- data_merged  
 
 data_path <- here::here("data", "data.csv")
 write_csv(data_complete, data_path)
 data_path <- here::here("data", "data.rds")
 saveRDS(data_complete, data_path)
 
-data_path <- here::here("webapp","data", "data.csv")
-write_csv(data_complete, data_path)
-data_path <- here::here("webapp","data", "data.rds")
-saveRDS(data_complete, data_path)
-
-
-# data_path <- here::here("data", "data.rda")
+## SO FAR; comment and shiny app is no longer up-to date
+# data_path <- here::here("webapp","data", "data.csv")
+# write_csv(data_complete, data_path)
+# data_path <- here::here("webapp","data", "data.rds")
 # saveRDS(data_complete, data_path)
+
