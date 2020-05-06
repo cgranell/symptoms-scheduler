@@ -255,11 +255,12 @@ colnames(summaries) <- col_names
 
 for (s in 1:length(schedulers)) {
   for (d in 1:length(devices)) {
+    
     data %>%
-      filter(scheduler==schedulers[[s]]) %>%
-      filter(device_name==devices[[d]]) %>%
+      filter(scheduler == schedulers[[s]]) %>%
+      filter(device_name == devices[[d]]) %>%
       select(device_id, device_name, delay) -> one
-    # cat(nrow(single),"\n")
+    
     summary_row <- data.frame(matrix(ncol=length(col_names), nrow = 0))
     colnames(summary_row) <- col_names
     
@@ -318,6 +319,10 @@ kable(stats_summaries %>%
 
 ```{r outliers}
 
+devices_OK <- c("BQ" = "BQ Aquaris V",
+                "H9" = "Honor 9",
+                "MO" = "Motorola Moto G")
+
 data %>% 
   left_join(summaries, by=c("scheduler", "device_name")) %>%
   mutate(outlier = ifelse((delay < bottom_whisker | delay > top_whisker), 1, 0)) %>%
@@ -344,11 +349,14 @@ n_irq <- nrow(filter(data, outlier == 0 & whisker == 0))
 
 - `Nvidia Shield Tablet` has stopped triggering alarms on  **2020-04-17 22:27:06** when running the basic scheduler. Since there's no _watchdog_ in the basic version, this device is not going to trigger alarms anymore. Died!
 
-- `Xiaomi Mi A1` has stopped triggering alarms on **2020-04-23 00:52:00** when running the basic scheduler. 
+- `Xiaomi Mi A1` has stopped triggering alarms on **2020-04-23 00:52:00** when running the basic scheduler. Died!
 
+- It makes sense to continue the analysis with the 3 devices that completed the two experiments: `Honor 9`, `Motorola Moto G`, and 
+`BQ Aquaris V`.
 
-```{r outliers_table_plot}
+### Outliers
 
+```{r outliers_table}
 outliers <- 
   filter(data, outlier==1) %>%
   group_by(exp_id, scheduler, device_name) %>%
@@ -366,28 +374,116 @@ kable(outliers %>%
   kable_styling(full_width =FALSE,position = "left", bootstrap_options = c("striped", "bordered", "condensed")) %>%
   collapse_rows(columns = 1, valign = "middle") %>%
   row_spec(c(8,10), color = "white", background = "#D7261E")
-
-
-ggplot(outliers) +
-  geom_bar(aes(x=device_name, y=n, fill=scheduler), stat = 'identity', position = position_dodge(preserve = 'single')) +
-  theme_bw()
-
-  # frame() # thx to https://stackoverflow.com/a/25194694/261210
-  # vps <- baseViewports()
-  # pushViewport(vps$inner, vps$figure, vps$plot)
-  # grid.table(outliers,
-  #            theme = ttheme_minimal(base_size = 11,
-  #                                   padding = unit(c(10,5), "pt"))
-  #            )
-  # popViewport(3)
-
-
 ```
 
 
 
+```{r outliers_plot}
+ggplot(outliers %>% filter(device_name %in% as.vector(devices_OK))) +
+  geom_bar(aes(x=device_name, y=n, fill=scheduler), stat = 'identity', position = position_dodge(preserve = 'single')) +
+  theme_bw() +
+  labs(title = "Absolute number of outliers per device")
+
+```
+
+
+**Observations**:
+
+- Avanced scheduler beats the basic one in terms of number of outliers. `Honor 9` shows a remarkly difference. 
+
   
 ### Distribution of `delay` over `plan_date`
+
+```{r dual_scale_plots_function}
+source(here::here("R", "dual_scale_plot.R"))
+```
+
+```{r dual_scale_plots_BQ, fig.width=14, fig.height=8}
+# BQ Aquaris V
+
+selection <- 
+  data %>%
+  filter(device_name == devices_OK[[1]], outlier == 0) %>%
+  arrange(plan_date)
+
+
+plot_BQ_wo_outliers <- dual_scale_plot(selection, 
+                           paste(devices_OK[[1]], "(without outliers)"))
+
+selection <- 
+  data %>%
+  filter(device_name == devices_OK[[1]], outlier == 0, whisker == 0) %>%
+  arrange(plan_date)
+
+
+plot_BQ_wo_whisker <- dual_scale_plot(selection, 
+                           paste(devices_OK[[1]], "(without outliers & whiskers)"))
+
+
+plot_BQ_wo_outliers
+
+plot_BQ_wo_whisker
+```
+
+**Observations**:
+
+- Basic scheduler spreads less than the advanced one. 
+
+```{r dual_scale_plots_HO, fig.width=14, fig.height=8}
+
+# Honor 9
+
+selection <- 
+  data %>%
+  filter(device_name == devices_OK[[2]], outlier == 0) %>%
+  arrange(plan_date)
+
+plot_HO_wo_outliers <- dual_scale_plot(selection, 
+                           paste(devices_OK[[2]], "(without outliers)"))
+
+selection <- 
+  data %>%
+  filter(device_name == devices_OK[[2]], outlier == 0, whisker == 0) %>%
+  arrange(plan_date)
+
+
+plot_HO_wo_whisker <- dual_scale_plot(selection, 
+                           paste(devices_OK[[2]], "(without outliers & whiskers)"))
+
+
+plot_HO_wo_outliers
+
+plot_HO_wo_whisker
+```
+
+
+```{r dual_scale_plots_MO, fig.width=14, fig.height=8}
+
+# Motorola Moto G
+
+selection <- 
+  data %>%
+  filter(device_name == devices_OK[[3]], outlier == 0) %>%
+  arrange(plan_date)
+
+plot_MO_wo_outliers <- dual_scale_plot(selection, 
+                           paste(devices_OK[[3]], "(without outliers)"))
+
+selection <- 
+  data %>%
+  filter(device_name == devices_OK[[3]], outlier == 0, whisker == 0) %>%
+  arrange(plan_date)
+
+
+plot_MO_wo_whisker <- dual_scale_plot(selection, 
+                           paste(devices_OK[[3]], "(without outliers & whiskers)"))
+
+
+plot_MO_wo_outliers
+
+plot_MO_wo_whisker
+```
+
 
 See the [shiny app](https://cgranell.shinyapps.io/symptoms-scheduler/)! (TO BE UPDATED)
 
