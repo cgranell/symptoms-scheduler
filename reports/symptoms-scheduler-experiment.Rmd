@@ -6,6 +6,7 @@ output:
   html_document:
     df_print: paged
     toc: yes
+    toc_depth: 4
 ---
 
 ```{r setup, include=FALSE, eval=TRUE}
@@ -180,9 +181,14 @@ data_merged <-
   data_merged %>%
   mutate(exec_date = as_datetime(exec_timestamp/1000, tz="Europe/Madrid"),
          plan_date = as_datetime(planning_timestamp/1000, tz="Europe/Madrid"),
+         plan_minute = lubridate::minute(plan_date),
          plan_hour = lubridate::hour(plan_date),
          plan_day = lubridate::day(plan_date),
          plan_month = lubridate::month(plan_date),
+         exec_minute = lubridate::minute(exec_date),
+         exec_hour = lubridate::hour(exec_date),
+         exec_day = lubridate::day(exec_date),
+         exec_month = lubridate::month(exec_date),
          time_period = ifelse(between(plan_hour,0, 7), "nighttime", "daytime"))
 
 
@@ -245,7 +251,7 @@ __Key Variables__:
 ## Exploratory analysis
 
 
-### Distribution of the data
+### Basic statistics
 
 ```{r load_assessdata, warning=FALSE}
 assessment_file <- here::here("data", "data.rds")
@@ -362,12 +368,12 @@ n_irq <- nrow(filter(data, outlier == 0 & whisker == 0))
 
 - `Nvidia Shield Tablet` has stopped triggering alarms on  **2020-04-17 22:27:06** when running the basic scheduler. Since there's no _watchdog_ in the basic version, this device is not going to trigger alarms anymore. Died!
 
-- `Xiaomi Mi A1` has stopped triggering alarms on **2020-04-23 00:52:00** when running the basic scheduler. Died!
+- `Xiaomi Mi A1` has stopped triggering alarms on **2020-04-23 00:52:00** when running the basic scheduler. An explanation may be that Huawei/Honor smartphones on Android 9+ have a Launch Records where the OS records how much times an app has been launched by itself, so the OS has the possibility to detect this kind of apps. In these smartphones, Huawei also introduced a new task killer (Power Genius) which kills everything that is not whitelisted by Huawei, and does not give users any configuration options. Therefore, the Power Genius uses the information from the Launch Records to kill the scheduled alarms
 
 - It makes sense to continue the analysis with the 3 devices that completed the two experiments: `Honor 9`, `Motorola Moto G`, and 
 `BQ Aquaris V`.
 
-### Outliers
+### Distribution of outliers
 
 ```{r outliers_table}
 outliers <- 
@@ -390,7 +396,6 @@ kable(outliers %>%
 ```
 
 
-
 ```{r outliers_plot}
 ggplot(outliers %>% filter(device_name %in% as.vector(devices_OK))) +
   geom_bar(aes(x=device_name, y=n, fill=scheduler), stat = 'identity', position = position_dodge(preserve = 'single')) +
@@ -402,19 +407,54 @@ ggplot(outliers %>% filter(device_name %in% as.vector(devices_OK))) +
 
 **Observations**:
 
-- Avanced scheduler beats the basic one in terms of number of outliers. `Honor 9` shows a remarkly difference. 
+- Advanced scheduler beats the basic one in terms of number of outliers. `Honor 9` shows a remarkly difference. 
+
+
+#### BQ Aquaris V
+
+_How do outliers distribute over time?_
+```{r outliers_BQ}
+
+outliers_BQ <- 
+  filter(data, outlier==1, device_id =="BQ") %>%
+  group_by(scheduler, plan_month, plan_day, plan_hour) %>%
+  summarise(n = n()) %>%
+  mutate(date = lubridate::ymd(paste0("2020-",
+                                        str_pad(plan_month, width=2, side="left", pad="0"),"-", 
+                                        plan_day)))
+
+```
+
+```{r outliers_BQ_plot, fig.height=8, fig.width=18}
+
+bubblechart <- 
+    outliers_BQ %>%
+    ggplot(aes(x=date, y=plan_hour, color=factor(scheduler))) +
+    geom_point(aes(size=n), alpha=0.2, na.rm = TRUE) +
+    geom_text(aes(label=n), color="black", size=2, na.rm = TRUE) +
+    scale_size_area(max_size=15) +
+    scale_y_continuous(breaks = seq(0,23)) +
+    scale_x_date(breaks = scales::date_breaks("1 day"),
+                 labels = scales::date_format("%d-%m", tz="CET")) +
+    theme_minimal() +
+    labs(title= "Count of outliers by hour")
+
+bubblechart
+```
 
   
-### Distribution of `delay` over `plan_date`
+### Distribution of `delay` (over `plan_date`)
 
 
 ```{r dual_scale_plots_function}
 source(here::here("R", "dual_scale_plot.R"))
 ```
 
-**BQ Aquaris V**: Advance scheduler show worse delay times. In addition, delays steadily increase over time. In contrast, the basic scheduler shows uniform delays over time adn concentrated aoru 0.3 sec. Teh basic scheduler's boxplot shows a thinner box than the advance scheduler's. There seems no clear relationship between battery levels and delays, which suggests that low battery levels do not impact (or at least not significally) on the planned execution time of a task. 
+#### BQ Aquaris V
 
-_To explore: what happens when battery is fully recharged?_
+_How does `delay` behave in the middle 50% of data (IRQ)?_
+
+Advance scheduler shows worse delay times. In addition, the central cluster shows steadily increased values of `delay` over time. In contrast, the basic scheduler shows uniform delays over time adn concentrated aoru 0.3 sec. Teh basic scheduler's boxplot shows a thinner box than the advance scheduler's. There seems no clear relationship between battery levels and delays, which suggests that low battery levels do not impact (or at least not significally) on the planned execution time of a task. 
 
 ```{r dual_scale_plots_BQ, fig.width=14, fig.height=10}
 selection <- 
@@ -444,7 +484,6 @@ selection <-
 plot_BQ_wo_whisker <- dual_scale_plot(selection, 
                            paste(devices_OK[[1]], "(without outliers & whiskers)"))
 
-
 boxplot_BQ_wo_whisker <-
   filter(selection) %>%
     ggplot(aes(x = device_id, y = delay, fill=factor(exp_id))) + 
@@ -456,16 +495,6 @@ boxplot_BQ_wo_whisker <-
     guides(fill=FALSE)
 
 
-
-# plot_BQ_wo_outliers
-# plot_BQ_wo_whisker
-# 
-# boxplot_BQ_wo_outliers
-# boxplot_BQ_wo_whisker
-# 
-# 
-# grid.arrange(plot_BQ_wo_outliers, boxplot_BQ_wo_outliers, nrow = 1)
-
 ggarrange(plot_BQ_wo_outliers, boxplot_BQ_wo_outliers, 
           plot_BQ_wo_whisker, boxplot_BQ_wo_whisker, 
           widths = c(3, 1), heights = c(3, 3))
@@ -473,7 +502,15 @@ ggarrange(plot_BQ_wo_outliers, boxplot_BQ_wo_outliers,
 ```
 
 
-**Honor 9**:
+_What happens when battery is going to be fully recharged?_
+
+
+
+
+#### Honor 9
+
+_How does `delay` behave in the middle 50% of data (IRQ)?_
+
 
 ```{r dual_scale_plots_HO, fig.width=14, fig.height=8}
 
@@ -500,7 +537,7 @@ plot_HO_wo_outliers
 plot_HO_wo_whisker
 ```
 
-**Motorola Moto G**:
+#### Motorola Moto G
 
 ```{r dual_scale_plots_MO, fig.width=14, fig.height=8}
 
