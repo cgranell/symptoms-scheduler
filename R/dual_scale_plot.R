@@ -31,9 +31,11 @@ dual_scale_plot <- function(selection, plot_title) {
     scale_y_continuous(name="delay [seconds]", breaks=ybks_delay, limits=ylim_delay, 
                        sec.axis=sec_axis(~./scalefactor, breaks=ybks_battery, name="battery [%]")) +
     
-    guides(color=guide_legend(title="Scheduler",
-                              # override.aes=list(fill=NA),
-                              nrow=2)) + 
+    # guides(color=guide_legend(title="Scheduler",
+    #                           # override.aes=list(fill=NA),
+    #                           nrow=2)) + 
+    # 
+    guides(color=FALSE) +
     
     theme(legend.title = element_text(size=8), 
           legend.position="bottom",

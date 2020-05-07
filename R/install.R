@@ -8,3 +8,4 @@ install.packages("stringr")
 install.packages("scales")
 install.packages("scales")
 
+install.packages("egg")

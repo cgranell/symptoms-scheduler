@@ -49,6 +49,7 @@ library(plotly)
 library(grid)
 library(gridBase)
 library(gridExtra)
+library(egg)
 ```
 
 
@@ -58,6 +59,8 @@ set.seed(nchar("Symptoms - scheduler experiment"))
 ```
 
 ## Data download
+
+Log files are stored in shared gdrvie folder. This notebook downloads them locally in the folder`data-raw`.
 
 ```{r gsheetdata_files}
 
@@ -78,6 +81,14 @@ files <- tibble(
 )
 ```
 
+```{r gsheetdata_files_table}
+kable(files,
+      format = "html",
+      booktabs = TRUE,
+      caption = "Table. List of raw data files.") %>%
+  kable_styling(full_width = TRUE, bootstrap_options = c("striped", "bordered", "condensed"))
+
+```
 
 
 ```{r gsheetdata_download, eval=FALSE}
@@ -98,6 +109,8 @@ drive_deauth()
 
 
 ## Data preparation
+
+Raw data files are cleaned and merged together into a single file stored in the folder `data`. New fields such as dates breakdown are computed too. 
 
 ```{r merge_datafiles_defs}
 
@@ -243,7 +256,7 @@ n_observations <- nrow(data)
 ```
 
 
-```{r gobal_summary_table}
+```{r stats_summary_table}
 
 # https://towardsdatascience.com/understanding-boxplots-5e2df7bcbd51
 # Understanding Boxplot. What is a outlier?
@@ -308,7 +321,7 @@ kable(stats_summaries %>%
                `Max` = max),
       format = "html",
       booktabs = TRUE,
-      caption = "Table. Descriptive data (total, ranges) per device.") %>%
+      caption = "Table. Descriptive statistics of data distribution and centrality per scheduler/device.") %>%
   kable_styling(full_width = TRUE, bootstrap_options = c("striped", "bordered", "condensed")) %>%
   collapse_rows(columns = 1:2, valign = "top") %>%
   row_spec(9:10, color = "white", background = "#D7261E")
@@ -394,13 +407,16 @@ ggplot(outliers %>% filter(device_name %in% as.vector(devices_OK))) +
   
 ### Distribution of `delay` over `plan_date`
 
+
 ```{r dual_scale_plots_function}
 source(here::here("R", "dual_scale_plot.R"))
 ```
 
-```{r dual_scale_plots_BQ, fig.width=14, fig.height=8}
-# BQ Aquaris V
+**BQ Aquaris V**: Advance scheduler show worse delay times. In addition, delays steadily increase over time. In contrast, the basic scheduler shows uniform delays over time adn concentrated aoru 0.3 sec. Teh basic scheduler's boxplot shows a thinner box than the advance scheduler's. There seems no clear relationship between battery levels and delays, which suggests that low battery levels do not impact (or at least not significally) on the planned execution time of a task. 
 
+_To explore: what happens when battery is fully recharged?_
+
+```{r dual_scale_plots_BQ, fig.width=14, fig.height=10}
 selection <- 
   data %>%
   filter(device_name == devices_OK[[1]], outlier == 0) %>%
@@ -409,6 +425,15 @@ selection <-
 
 plot_BQ_wo_outliers <- dual_scale_plot(selection, 
                            paste(devices_OK[[1]], "(without outliers)"))
+
+boxplot_BQ_wo_outliers <-
+  filter(selection) %>%
+    ggplot(aes(x = device_id, y = delay, fill=factor(exp_id))) + 
+    geom_boxplot(alpha = 0.7) +
+    facet_grid(~scheduler) +
+    theme_bw() +
+    # scale_fill_hue() +
+    guides(fill=FALSE)
 
 selection <- 
   data %>%
@@ -420,18 +445,37 @@ plot_BQ_wo_whisker <- dual_scale_plot(selection,
                            paste(devices_OK[[1]], "(without outliers & whiskers)"))
 
 
-plot_BQ_wo_outliers
+boxplot_BQ_wo_whisker <-
+  filter(selection) %>%
+    ggplot(aes(x = device_id, y = delay, fill=factor(exp_id))) + 
+    geom_boxplot(alpha = 0.7,
+                 outlier.colour = "#1F3552", outlier.shape = 20) +
+    facet_grid(~scheduler) +
+    theme_bw() +
+    # scale_fill_hue() +
+    guides(fill=FALSE)
 
-plot_BQ_wo_whisker
+
+
+# plot_BQ_wo_outliers
+# plot_BQ_wo_whisker
+# 
+# boxplot_BQ_wo_outliers
+# boxplot_BQ_wo_whisker
+# 
+# 
+# grid.arrange(plot_BQ_wo_outliers, boxplot_BQ_wo_outliers, nrow = 1)
+
+ggarrange(plot_BQ_wo_outliers, boxplot_BQ_wo_outliers, 
+          plot_BQ_wo_whisker, boxplot_BQ_wo_whisker, 
+          widths = c(3, 1), heights = c(3, 3))
+
 ```
 
-**Observations**:
 
-- Basic scheduler spreads less than the advanced one. 
+**Honor 9**:
 
 ```{r dual_scale_plots_HO, fig.width=14, fig.height=8}
-
-# Honor 9
 
 selection <- 
   data %>%
@@ -456,10 +500,9 @@ plot_HO_wo_outliers
 plot_HO_wo_whisker
 ```
 
+**Motorola Moto G**:
 
 ```{r dual_scale_plots_MO, fig.width=14, fig.height=8}
-
-# Motorola Moto G
 
 selection <- 
   data %>%
