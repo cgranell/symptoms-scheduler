@@ -101,7 +101,7 @@ data_merged <-
          delay = (as.duration(interval(plan_date, exec_date)) - baseline_delay) / dseconds(1),
          delay = round(delay, 3))
 
-#TODO: handle outliers in notebooks To update shiny app
+#TODO: Outliers are handeled in notebooks. To update shiny app
 
 # Outliers
 # means <- 

@@ -250,6 +250,11 @@ __Key Variables__:
 
 ## Exploratory analysis
 
+- Which one of the analysed schedulers is more accurate? (lower delay)
+__- Which one of the analysed schedulers is more reliable? (fewer outliers and a more predictable execution)__
+- Which one of the analysed schedulers loses fewer alarm executions? (higher percentage of alarms executed / expected alarms for the experiment time frame)
+- Does the battery level influence timely alarm execution?
+
 
 ### Basic statistics
 
@@ -344,7 +349,9 @@ devices_OK <- c("BQ" = "BQ Aquaris V",
 
 data %>% 
   left_join(summaries, by=c("scheduler", "device_name")) %>%
-  mutate(outlier = ifelse((delay < bottom_whisker | delay > top_whisker), 1, 0)) %>%
+  mutate(outlier_pos = ifelse(delay > top_whisker, 1, 0)) %>%
+  mutate(outlier_neg = ifelse(delay < bottom_whisker, 1, 0)) %>%
+  mutate(outlier = ifelse((outlier_pos == 1 | outlier_neg == 1), 1, 0)) %>%
   mutate(whisker = ifelse((delay > bottom_whisker & delay < quartile1) | (delay > quartile3 & delay < top_whisker), 1, 0)) %>%
   select(-min,-bottom_whisker, -quartile1, -mean, -median, -quartile3, -top_whisker, -max) %>%
   arrange(device_id, plan_date) -> data
@@ -374,6 +381,8 @@ n_irq <- nrow(filter(data, outlier == 0 & whisker == 0))
 `BQ Aquaris V`.
 
 ### Distribution of outliers
+
+_Which one of the analysed schedulers is more reliable?_ To answer this question we analyse the sitribtu of outleide per devicewhich scheduler shows fewer outliers, becaure this signals a more predictable execution,
 
 ```{r outliers_table}
 outliers <- 
@@ -413,7 +422,13 @@ ggplot(outliers %>% filter(device_name %in% as.vector(devices_OK))) +
 #### BQ Aquaris V
 
 _How do outliers distribute over time?_
+
+
 ```{r outliers_BQ}
+
+n_outliers_BQ <- nrow(filter(data, outlier==1, device_id =="BQ"))
+n_outliers_pos_BQ <- nrow(filter(data, outlier_pos==1, device_id =="BQ"))
+n_outliers_neg_BQ <- nrow(filter(data, outlier_neg==1, device_id =="BQ"))
 
 outliers_BQ <- 
   filter(data, outlier==1, device_id =="BQ") %>%
@@ -423,11 +438,35 @@ outliers_BQ <-
                                         str_pad(plan_month, width=2, side="left", pad="0"),"-", 
                                         plan_day)))
 
+outliers_pos_BQ <- 
+  filter(data, outlier_pos==1, device_id =="BQ") %>%
+  group_by(scheduler, plan_month, plan_day, plan_hour) %>%
+  summarise(n = n()) %>%
+  mutate(date = lubridate::ymd(paste0("2020-",
+                                        str_pad(plan_month, width=2, side="left", pad="0"),"-", 
+                                        plan_day)))
+
+outliers_neg_BQ <- 
+  filter(data, outlier_neg==1, device_id =="BQ") %>%
+  group_by(scheduler, plan_month, plan_day, plan_hour) %>%
+  summarise(n = n()) %>%
+  mutate(date = lubridate::ymd(paste0("2020-",
+                                        str_pad(plan_month, width=2, side="left", pad="0"),"-", 
+                                        plan_day)))
+
 ```
+
+- Number of outliers: `r n_outliers_BQ`
+
+- Number of outliers (top range): `r n_outliers_pos_BQ` - `r round((n_outliers_pos_BQ / n_outliers_BQ)*100, 1)`% (`r scales::comma(n_outliers_pos_BQ, big.mark = ".")`/`r scales::comma(n_outliers_BQ, big.mark = ".")`).
+
+- Number of outliers (bottom range): `r n_outliers_neg_BQ` - `r round((n_outliers_neg_BQ / n_outliers_BQ)*100, 1)`% (`r scales::comma(n_outliers_neg_BQ, big.mark = ".")`/`r scales::comma(n_outliers_BQ, big.mark = ".")`).
+
+
 
 ```{r outliers_BQ_plot, fig.height=8, fig.width=18}
 
-bubblechart <- 
+outliers_BQ_bubblechart <- 
     outliers_BQ %>%
     ggplot(aes(x=date, y=plan_hour, color=factor(scheduler))) +
     geom_point(aes(size=n), alpha=0.2, na.rm = TRUE) +
@@ -437,12 +476,50 @@ bubblechart <-
     scale_x_date(breaks = scales::date_breaks("1 day"),
                  labels = scales::date_format("%d-%m", tz="CET")) +
     theme_minimal() +
-    labs(title= "Count of outliers by hour")
+    labs(title= "Count of outliers (ALL) by hour")
 
-bubblechart
+outliers_BQ_bubblechart
 ```
 
-  
+
+```{r  outliers_pos_BQ_plot, fig.height=8, fig.width=18}
+
+outliers_pos_BQ_bubblechart <- 
+    outliers_pos_BQ %>%
+    ggplot(aes(x=date, y=plan_hour, color=factor(scheduler))) +
+    geom_point(aes(size=n), alpha=0.2, na.rm = TRUE) +
+    geom_text(aes(label=n), color="black", size=2, na.rm = TRUE) +
+    scale_size_area(max_size=15) +
+    scale_y_continuous(breaks = seq(0,23)) +
+    scale_x_date(breaks = scales::date_breaks("1 day"),
+                 labels = scales::date_format("%d-%m", tz="CET")) +
+    theme_minimal() +
+    labs(title= "Count of outliers (POS) by hour")
+
+outliers_pos_BQ_bubblechart
+
+
+```
+
+```{r  outliers_neg_BQ_plot, fig.height=8, fig.width=18}
+
+outliers_neg_BQ_bubblechart <- 
+    outliers_neg_BQ %>%
+    ggplot(aes(x=date, y=plan_hour, color=factor(scheduler))) +
+    geom_point(aes(size=n), alpha=0.2, na.rm = TRUE) +
+    geom_text(aes(label=n), color="black", size=2, na.rm = TRUE) +
+    scale_size_area(max_size=15) +
+    scale_y_continuous(breaks = seq(0,23)) +
+    scale_x_date(breaks = scales::date_breaks("1 day"),
+                 labels = scales::date_format("%d-%m", tz="CET")) +
+    theme_minimal() +
+    labs(title= "Count of outliers (NEG) by hour")
+
+outliers_neg_BQ_bubblechart
+
+```
+
+
 ### Distribution of `delay` (over `plan_date`)
 
 
