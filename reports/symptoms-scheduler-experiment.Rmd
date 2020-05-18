@@ -221,7 +221,7 @@ write_csv(data_complete, data_path)
 data_path <- here::here("data", "data.rds")
 saveRDS(data_complete, data_path)
 
-#TODO: 
+#TODO: shiny app is deprecated
 # data_path <- here::here("webapp","data", "data.csv")
 # write_csv(data_complete, data_path)
 # data_path <- here::here("webapp","data", "data.rds")
@@ -338,9 +338,9 @@ kable(stats_summaries %>%
 
 ```{r outliers}
 
-devices_OK <- c("BQ" = "BQ Aquaris V",
-                "H9" = "Honor 9",
-                "MO" = "Motorola Moto G")
+# devices_OK <- c("BQ" = "BQ Aquaris V",
+#                 "H9" = "Honor 9",
+#                 "MO" = "Motorola Moto G")
 
 data %>% 
   left_join(summaries, by=c("scheduler", "device_name")) %>%
@@ -372,8 +372,6 @@ n_irq <- nrow(filter(data, outlier == 0 & whisker == 0))
 
 - `Xiaomi Mi A1` has stopped triggering alarms on **2020-04-23 00:52:00** when running the basic scheduler. An explanation may be that Huawei/Honor smartphones on Android 9+ have a Launch Records where the OS records how much times an app has been launched by itself, so the OS has the possibility to detect this kind of apps. In these smartphones, Huawei also introduced a new task killer (Power Genius) which kills everything that is not whitelisted by Huawei, and does not give users any configuration options. Therefore, the Power Genius uses the information from the Launch Records to kill the scheduled alarms
 
-- It makes sense to continue the analysis with the 3 devices that completed the two experiments: `Honor 9`, `Motorola Moto G`, and 
-`BQ Aquaris V`.
 
 ### Which one of the analysed schedulers is more reliable? (Distribution of outliers)
 
@@ -417,13 +415,15 @@ kable(outliers %>%
       booktabs = TRUE,
       caption = "Table. Outliers per scheduler/device.") %>%
   kable_styling(full_width =FALSE,position = "left", bootstrap_options = c("striped", "bordered", "condensed")) %>%
-  collapse_rows(columns = 1, valign = "middle") %>%
-  row_spec(c(8,10), color = "white", background = "#D7261E")
+  # collapse_rows(columns = 1, valign = "middle") %>%
+  row_spec(c(8,10), color = "white", background = "#D7261E") %>%
+  row_spec(3, color = "white", background = "orange")
+
 ```
 
 
 ```{r outliers_plot}
-ggplot(outliers %>% filter(device_name %in% as.vector(devices_OK))) +
+ggplot(outliers %>% filter(device_name %in% as.vector(devices))) +
   geom_bar(aes(x=device_name, y=n, fill=scheduler), stat = 'identity', position = position_dodge(preserve = 'single')) +
   theme_bw() +
   labs(title = "Absolute number of outliers per device")
