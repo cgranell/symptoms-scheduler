@@ -330,6 +330,7 @@ kable(stats_summaries %>%
       caption = "Table. Descriptive statistics of data distribution and centrality per scheduler/device.") %>%
   kable_styling(full_width = TRUE, bootstrap_options = c("striped", "bordered", "condensed")) %>%
   collapse_rows(columns = 1:2, valign = "top") %>%
+  # row_spec(6, color = "white", background = "orange") %>%
   row_spec(9:10, color = "white", background = "#D7261E")
 
 ```
@@ -438,12 +439,32 @@ ggplot(outliers %>% filter(device_name %in% as.vector(devices))) +
 - Majority of outliers are posisitoe (beyind top whisker).
 
 
+
+```{r bubblechart_fundefs}
+
+bubblechart_all_outliers <- function(sel_outliers, sel_title) {
+  sel_outliers %>%
+    ggplot(aes(x=date, y=plan_hour, color=factor(scheduler))) +
+    geom_point(aes(size=n), alpha=0.2, na.rm = TRUE) +
+    geom_text(aes(label=n), color="black", size=2, na.rm = TRUE) +
+    scale_size_area(max_size=15) +
+    scale_y_continuous(breaks = seq(0,23)) +
+    scale_x_date(breaks = scales::date_breaks("1 day"),
+                 labels = scales::date_format("%d-%m", tz="CET")) +
+    theme_minimal() +
+    labs(title = sel_title)
+  
+} 
+
+```
+
+
 #### BQ Aquaris V
 
 
 ```{r outliers_BQ}
 
-sel_device <- names(devices_OK)[1]
+sel_device <- names(devices)[1]
 n_outliers_BQ <- nrow(filter(data, outlier==1, device_id ==sel_device))
 n_outliers_pos_BQ <- nrow(filter(data, outlier_pos==1, device_id ==sel_device))
 n_outliers_neg_BQ <- nrow(filter(data, outlier_neg==1, device_id ==sel_device))
@@ -481,36 +502,16 @@ outliers_neg_BQ <-
 
 
 ```{r outliers_BQ_plot, fig.height=8, fig.width=18}
-
-outliers_BQ_bubblechart <- 
-    outliers_BQ %>%
-    ggplot(aes(x=date, y=plan_hour, color=factor(scheduler))) +
-    geom_point(aes(size=n), alpha=0.2, na.rm = TRUE) +
-    geom_text(aes(label=n), color="black", size=2, na.rm = TRUE) +
-    scale_size_area(max_size=15) +
-    scale_y_continuous(breaks = seq(0,23)) +
-    scale_x_date(breaks = scales::date_breaks("1 day"),
-                 labels = scales::date_format("%d-%m", tz="CET")) +
-    theme_minimal() +
-    labs(title= paste0("Count of (ALL) outliers grouped by hour (N=", n_outliers_BQ, ")"))
+title <- paste0(sel_device, " - Count of outliers (ALL) grouped by hour (N=", n_outliers_BQ, ")")
+outliers_BQ_bubblechart <- bubblechart_all_outliers(outliers_BQ, title)
 
 outliers_BQ_bubblechart
 ```
 
 
 ```{r  outliers_pos_BQ_plot, fig.height=8, fig.width=18}
-
-outliers_pos_BQ_bubblechart <- 
-    outliers_pos_BQ %>%
-    ggplot(aes(x=date, y=plan_hour, color=factor(scheduler))) +
-    geom_point(aes(size=n), alpha=0.2, na.rm = TRUE) +
-    geom_text(aes(label=n), color="black", size=2, na.rm = TRUE) +
-    scale_size_area(max_size=15) +
-    scale_y_continuous(breaks = seq(0,23)) +
-    scale_x_date(breaks = scales::date_breaks("1 day"),
-                 labels = scales::date_format("%d-%m", tz="CET")) +
-    theme_minimal() +
-    labs(title= paste0("Count of outliers (POS) grouped by hour (N=", n_outliers_pos_BQ, ")"))
+title <- paste0(sel_device, " - Count of outliers (POS) grouped by hour (N=", n_outliers_pos_BQ, ")")
+outliers_pos_BQ_bubblechart <- bubblechart_all_outliers(outliers_pos_BQ, title)
 
 outliers_pos_BQ_bubblechart
 
@@ -519,29 +520,153 @@ outliers_pos_BQ_bubblechart
 
 ```{r  outliers_neg_BQ_plot, fig.height=8, fig.width=18}
 
-outliers_neg_BQ_bubblechart <- 
-    outliers_neg_BQ %>%
-    ggplot(aes(x=date, y=plan_hour, color=factor(scheduler))) +
-    geom_point(aes(size=n), alpha=0.2, na.rm = TRUE) +
-    geom_text(aes(label=n), color="black", size=2, na.rm = TRUE) +
-    scale_size_area(max_size=15) +
-    scale_y_continuous(breaks = seq(0,23)) +
-    scale_x_date(breaks = scales::date_breaks("1 day"),
-                 labels = scales::date_format("%d-%m", tz="CET")) +
-    theme_minimal() +
-    labs(title= paste0("Count of outliers (NEG) grouped by hour (N=", n_outliers_neg_BQ, ")"))
-
+title <- paste0(sel_device, " - Count of outliers (NEG) grouped by hour (N=", n_outliers_neg_BQ, ")")
+outliers_neg_BQ_bubblechart <- bubblechart_all_outliers(outliers_neg_BQ, title)
+ 
 outliers_neg_BQ_bubblechart
 
 ```
 
 
 
-#### HONOR 9
+
+#### Nvidia Shield Tablet
+
+```{r outliers_NV}
+sel_device <- names(devices)[2]
+n_outliers_NV <- nrow(filter(data, outlier==1, device_id ==sel_device))
+n_outliers_pos_NV <- nrow(filter(data, outlier_pos==1, device_id ==sel_device))
+n_outliers_neg_NV <- nrow(filter(data, outlier_neg==1, device_id ==sel_device))
+
+outliers_NV <- 
+  filter(data, outlier==1, device_id ==sel_device) %>%
+  group_by(scheduler, plan_month, plan_day, plan_hour) %>%
+  summarise(n = n()) %>%
+  mutate(date = lubridate::ymd(paste0("2020-",
+                                        str_pad(plan_month, width=2, side="left", pad="0"),"-", 
+                                        plan_day)))
+outliers_pos_NV <- 
+  filter(data, outlier_pos==1, device_id ==sel_device) %>%
+  group_by(scheduler, plan_month, plan_day, plan_hour) %>%
+  summarise(n = n()) %>%
+  mutate(date = lubridate::ymd(paste0("2020-",
+                                        str_pad(plan_month, width=2, side="left", pad="0"),"-", 
+                                        plan_day)))
+
+outliers_neg_NV <- 
+  filter(data, outlier_neg==1, device_id ==sel_device) %>%
+  group_by(scheduler, plan_month, plan_day, plan_hour) %>%
+  summarise(n = n()) %>%
+  mutate(date = lubridate::ymd(paste0("2020-",
+                                        str_pad(plan_month, width=2, side="left", pad="0"),"-", 
+                                        plan_day)))
+
+
+```
+
+
+- Number of outliers: `r n_outliers_NV`
+
+- Number of outliers (top range): `r n_outliers_pos_NV` - `r round((n_outliers_pos_NV / n_outliers_NV)*100, 1)`% (`r scales::comma(n_outliers_pos_NV, big.mark = ".")`/`r scales::comma(n_outliers_NV, big.mark = ".")`).
+
+- Number of outliers (bottom range): `r n_outliers_neg_NV` - `r round((n_outliers_neg_NV / n_outliers_NV)*100, 1)`% (`r scales::comma(n_outliers_neg_NV, big.mark = ".")`/`r scales::comma(n_outliers_NV, big.mark = ".")`).
+
+
+```{r outliers_NV_plot, fig.height=8, fig.width=18}
+
+title <- paste0(sel_device, " - Count of (ALL) outliers grouped by hour (N=", n_outliers_NV, ")")
+outliers_NV_bubblechart <- bubblechart_all_outliers(outliers_NV, title)
+outliers_NV_bubblechart
+```
+
+```{r  outliers_pos_NV_plot, fig.height=8, fig.width=18}
+title <- paste0(sel_device, " - Count of (POS) outliers grouped by hour (N=", n_outliers_pos_NV, ")")
+outliers_pos_NV_bubblechart <- bubblechart_all_outliers(outliers_pos_NV, title)
+outliers_pos_NV_bubblechart
+
+```
+
+
+```{r  outliers_neg_NV_plot, fig.height=8, fig.width=18}
+title <- paste0(sel_device, " - Count of (NEG) outliers grouped by hour (N=", n_outliers_neg_NV, ")")
+outliers_neg_NV_bubblechart <- bubblechart_all_outliers(outliers_neg_NV, title)
+outliers_neg_NV_bubblechart
+
+```
+
+
+
+
+#### Xiaomi Mi A1
+
+```{r outliers_A1}
+sel_device <- names(devices)[3]
+n_outliers_A1 <- nrow(filter(data, outlier==1, device_id ==sel_device))
+n_outliers_pos_A1 <- nrow(filter(data, outlier_pos==1, device_id ==sel_device))
+n_outliers_neg_A1 <- nrow(filter(data, outlier_neg==1, device_id ==sel_device))
+
+outliers_A1 <- 
+  filter(data, outlier==1, device_id ==sel_device) %>%
+  group_by(scheduler, plan_month, plan_day, plan_hour) %>%
+  summarise(n = n()) %>%
+  mutate(date = lubridate::ymd(paste0("2020-",
+                                        str_pad(plan_month, width=2, side="left", pad="0"),"-", 
+                                        plan_day)))
+outliers_pos_A1 <- 
+  filter(data, outlier_pos==1, device_id ==sel_device) %>%
+  group_by(scheduler, plan_month, plan_day, plan_hour) %>%
+  summarise(n = n()) %>%
+  mutate(date = lubridate::ymd(paste0("2020-",
+                                        str_pad(plan_month, width=2, side="left", pad="0"),"-", 
+                                        plan_day)))
+
+outliers_neg_A1 <- 
+  filter(data, outlier_neg==1, device_id ==sel_device) %>%
+  group_by(scheduler, plan_month, plan_day, plan_hour) %>%
+  summarise(n = n()) %>%
+  mutate(date = lubridate::ymd(paste0("2020-",
+                                        str_pad(plan_month, width=2, side="left", pad="0"),"-", 
+                                        plan_day)))
+
+
+```
+
+
+- Number of outliers: `r n_outliers_A1`
+
+- Number of outliers (top range): `r n_outliers_pos_A1` - `r round((n_outliers_pos_A1 / n_outliers_A1)*100, 1)`% (`r scales::comma(n_outliers_pos_A1, big.mark = ".")`/`r scales::comma(n_outliers_A1, big.mark = ".")`).
+
+- Number of outliers (bottom range): `r n_outliers_neg_A1` - `r round((n_outliers_neg_A1 / n_outliers_A1)*100, 1)`% (`r scales::comma(n_outliers_neg_A1, big.mark = ".")`/`r scales::comma(n_outliers_A1, big.mark = ".")`).
+
+
+```{r outliers_A1_plot, fig.height=8, fig.width=18}
+
+title <- paste0(sel_device, " - Count of (ALL) outliers grouped by hour (N=", n_outliers_A1, ")")
+outliers_A1_bubblechart <- bubblechart_all_outliers(outliers_A1, title)
+outliers_A1_bubblechart
+```
+
+```{r  outliers_pos_A1_plot, fig.height=8, fig.width=18}
+title <- paste0(sel_device, " - Count of (POS) outliers grouped by hour (N=", n_outliers_pos_A1, ")")
+outliers_pos_A1_bubblechart <- bubblechart_all_outliers(outliers_pos_A1, title)
+outliers_pos_A1_bubblechart
+
+```
+
+
+```{r  outliers_neg_A1_plot, fig.height=8, fig.width=18}
+title <- paste0(sel_device, " - Count of (NEG) outliers grouped by hour (N=", n_outliers_neg_A1, ")")
+outliers_neg_A1_bubblechart <- bubblechart_all_outliers(outliers_neg_A1, title)
+outliers_neg_A1_bubblechart
+
+```
+
+
+#### Honor 9
 
 
 ```{r outliers_H9}
-sel_device <- names(devices_OK)[2]
+sel_device <- names(devices)[4]
 n_outliers_H9 <- nrow(filter(data, outlier==1, device_id ==sel_device))
 n_outliers_pos_H9 <- nrow(filter(data, outlier_pos==1, device_id ==sel_device))
 n_outliers_neg_H9 <- nrow(filter(data, outlier_neg==1, device_id ==sel_device))
@@ -580,36 +705,15 @@ outliers_neg_H9 <-
 
 ```{r outliers_H9_plot, fig.height=8, fig.width=18}
 
-outliers_H9_bubblechart <- 
-    outliers_H9 %>%
-    ggplot(aes(x=date, y=plan_hour, color=factor(scheduler))) +
-    geom_point(aes(size=n), alpha=0.2, na.rm = TRUE) +
-    geom_text(aes(label=n), color="black", size=2, na.rm = TRUE) +
-    scale_size_area(max_size=15) +
-    scale_y_continuous(breaks = seq(0,23)) +
-    scale_x_date(breaks = scales::date_breaks("1 day"),
-                 labels = scales::date_format("%d-%m", tz="CET")) +
-    theme_minimal() +
-    labs(title= paste0("Count of (ALL) outliers grouped by hour (N=", n_outliers_H9, ")"))
-
+title <- paste0(sel_device, " - Count of (ALL) outliers grouped by hour (N=", n_outliers_H9, ")")
+outliers_H9_bubblechart <- bubblechart_all_outliers(outliers_H9, title)
 outliers_H9_bubblechart
 ```
 
 
 ```{r  outliers_pos_H9_plot, fig.height=8, fig.width=18}
-
-outliers_pos_H9_bubblechart <- 
-    outliers_pos_H9 %>%
-    ggplot(aes(x=date, y=plan_hour, color=factor(scheduler))) +
-    geom_point(aes(size=n), alpha=0.2, na.rm = TRUE) +
-    geom_text(aes(label=n), color="black", size=2, na.rm = TRUE) +
-    scale_size_area(max_size=15) +
-    scale_y_continuous(breaks = seq(0,23)) +
-    scale_x_date(breaks = scales::date_breaks("1 day"),
-                 labels = scales::date_format("%d-%m", tz="CET")) +
-    theme_minimal() +
-    labs(title= paste0("Count of outliers (POS) grouped by hour (N=", n_outliers_pos_H9, ")"))
-
+title <- paste0(sel_device, " - Count of (POS) outliers grouped by hour (N=", n_outliers_pos_H9, ")")
+outliers_pos_H9_bubblechart <- bubblechart_all_outliers(outliers_pos_H9, title)
 outliers_pos_H9_bubblechart
 
 
@@ -618,19 +722,8 @@ outliers_pos_H9_bubblechart
 
 
 ```{r  outliers_neg_H9_plot, fig.height=8, fig.width=18}
-
-outliers_neg_H9_bubblechart <- 
-    outliers_neg_H9 %>%
-    ggplot(aes(x=date, y=plan_hour, color=factor(scheduler))) +
-    geom_point(aes(size=n), alpha=0.2, na.rm = TRUE) +
-    geom_text(aes(label=n), color="black", size=2, na.rm = TRUE) +
-    scale_size_area(max_size=15) +
-    scale_y_continuous(breaks = seq(0,23)) +
-    scale_x_date(breaks = scales::date_breaks("1 day"),
-                 labels = scales::date_format("%d-%m", tz="CET")) +
-    theme_minimal() +
-    labs(title= paste0("Count of outliers (NEG) grouped by hour (N=", n_outliers_neg_H9, ")"))
-
+title <- paste0(sel_device, " - Count of (NEG) outliers grouped by hour (N=", n_outliers_neg_H9, ")")
+outliers_neg_H9_bubblechart <- bubblechart_all_outliers(outliers_neg_H9, title)
 outliers_neg_H9_bubblechart
 
 ```
@@ -642,7 +735,7 @@ outliers_neg_H9_bubblechart
 
 
 ```{r outliers_MO}
-sel_device <- names(devices_OK)[3]
+sel_device <- names(devices)[5]
 n_outliers_MO <- nrow(filter(data, outlier==1, device_id ==sel_device))
 n_outliers_pos_MO <- nrow(filter(data, outlier_pos==1, device_id ==sel_device))
 n_outliers_neg_MO <- nrow(filter(data, outlier_neg==1, device_id ==sel_device))
@@ -680,37 +773,15 @@ outliers_neg_MO <-
 
 
 ```{r outliers_MO_plot, fig.height=8, fig.width=18}
-
-outliers_MO_bubblechart <- 
-    outliers_MO %>%
-    ggplot(aes(x=date, y=plan_hour, color=factor(scheduler))) +
-    geom_point(aes(size=n), alpha=0.2, na.rm = TRUE) +
-    geom_text(aes(label=n), color="black", size=2, na.rm = TRUE) +
-    scale_size_area(max_size=15) +
-    scale_y_continuous(breaks = seq(0,23)) +
-    scale_x_date(breaks = scales::date_breaks("1 day"),
-                 labels = scales::date_format("%d-%m", tz="CET")) +
-    theme_minimal() +
-    labs(title= paste0("Count of (ALL) outliers grouped by hour (N=", n_outliers_MO, ")"))
-
+title <- paste0(sel_device, " - Count of (ALL) outliers grouped by hour (N=", n_outliers_MO, ")")
+outliers_MO_bubblechart <- bubblechart_all_outliers(outliers_MO, title)
 outliers_MO_bubblechart
 ```
 
 
 ```{r  outliers_pos_MO_plot, fig.height=8, fig.width=18}
-
-outliers_pos_MO_bubblechart <- 
-    outliers_pos_MO %>%
-    ggplot(aes(x=date, y=plan_hour, color=factor(scheduler))) +
-    geom_point(aes(size=n), alpha=0.2, na.rm = TRUE) +
-    geom_text(aes(label=n), color="black", size=2, na.rm = TRUE) +
-    scale_size_area(max_size=15) +
-    scale_y_continuous(breaks = seq(0,23)) +
-    scale_x_date(breaks = scales::date_breaks("1 day"),
-                 labels = scales::date_format("%d-%m", tz="CET")) +
-    theme_minimal() +
-    labs(title= paste0("Count of outliers (POS) grouped by hour (N=", n_outliers_pos_MO, ")"))
-
+title <- paste0(sel_device, " - Count of (POS) outliers grouped by hour (N=", n_outliers_pos_MO, ")")
+outliers_pos_MO_bubblechart <- bubblechart_all_outliers(outliers_pos_MO, title)
 outliers_pos_MO_bubblechart
 
 ```
@@ -718,28 +789,23 @@ outliers_pos_MO_bubblechart
 
 
 ```{r  outliers_neg_MO_plot, fig.height=8, fig.width=18}
-
-outliers_neg_MO_bubblechart <- 
-    outliers_neg_MO %>%
-    ggplot(aes(x=date, y=plan_hour, color=factor(scheduler))) +
-    geom_point(aes(size=n), alpha=0.2, na.rm = TRUE) +
-    geom_text(aes(label=n), color="black", size=2, na.rm = TRUE) +
-    scale_size_area(max_size=15) +
-    scale_y_continuous(breaks = seq(0,23)) +
-    scale_x_date(breaks = scales::date_breaks("1 day"),
-                 labels = scales::date_format("%d-%m", tz="CET")) +
-    theme_minimal() +
-    labs(title= paste0("Count of outliers (NEG) grouped by hour (N=", n_outliers_neg_MO, ")"))
-
+title <- paste0(sel_device, " - Count of (NEG) outliers grouped by hour (N=", n_outliers_neg_MO, ")")
+outliers_neg_MO_bubblechart <- bubblechart_all_outliers(outliers_neg_MO, title)
 outliers_neg_MO_bubblechart
 
 ```
 
 
 
-### Which one of the analysed schedulers is more accurate? (Distribution of `delay` over `plan_date` - without outliers)
+### Which one of the analysed schedulers is more accurate? (Distribution of `delay` - without outliers)
 
-Higher accurate  = lower `delay`  
+Basic assumption: Higher accuracy = lower `delay`  
+
+To evaluate it, we plot timestamps as follows (being "n" each row in the data file): 
+
+- planning timestamp(n) - execution timestamp(n) [the current one, which displays framework overhead], 
+- planning timestamp(n-1) - planning timestamp(n) [in order to detect wrong planning timestamp values] 
+- execution timestamp(n-1) - execution timestamp(n) [this last one should be reliable],
 
 
 ```{r dual_scale_plots_function}
@@ -748,19 +814,53 @@ source(here::here("R", "dual_scale_plot.R"))
 
 #### BQ Aquaris V
 
+
+```{r}
+sel_device_name <- devices[[1]]
+selection <- 
+  data %>%
+  filter(device_name == sel_device_name) %>%
+  arrange(plan_date) %>%
+  select(step, scheduler, device_id, device_name, delay, plan_date, exec_date)
+
+# - planning timestamp(n-1) - planning timestamp(n) [in order to detect wrong planning timestamp values] 
+selection %>%
+  group_by(scheduler) %>%
+  mutate(plan_date_lagged = lag(plan_date),
+         plan_date_diff = as.numeric(as.duration(interval(plan_date_lagged, plan_date)) / dseconds(1)),
+         plan_date_diff = ifelse(is.na(plan_date_diff), 0, round(plan_date_diff, 3)),
+         plan_date_cum = cumsum(plan_date_diff),
+         exec_date_lagged = dplyr::lag(exec_date),
+         exec_date_diff = as.duration(interval(exec_date_lagged, exec_date)) / dseconds(1),
+         exec_date_diff = round(exec_date_diff, 3)) -> selection
+
+# TODO: some weird values. some values of plan_date_diff > 100, 1 value > 1000!)
+selection %>%
+  ggplot(aes(x = device_name, y = plan_date_diff, fill=factor(scheduler))) + 
+    geom_boxplot(alpha = 0.7) +
+    facet_grid(~scheduler) +
+    theme_bw() +
+    # scale_fill_hue() +
+    guides(fill=FALSE)
+```
+
+
+
+
 _How does `delay` behave in the middle 50% of data (IRQ)?_
 
 Advance scheduler shows worse delay times. In addition, the central cluster shows steadily increased values of `delay` over time. In contrast, the basic scheduler shows uniform delays over time adn concentrated aoru 0.3 sec. Teh basic scheduler's boxplot shows a thinner box than the advance scheduler's. There seems no clear relationship between battery levels and delays, which suggests that low battery levels do not impact (or at least not significally) on the planned execution time of a task. 
 
 ```{r dual_scale_plots_BQ, fig.width=14, fig.height=10}
+sel_device_name <- devices[[1]]
 selection <- 
   data %>%
-  filter(device_name == devices_OK[[1]], outlier == 0) %>%
+  filter(device_name == sel_device_name, outlier == 0) %>%
   arrange(plan_date)
 
 
 plot_BQ_wo_outliers <- dual_scale_plot(selection, 
-                           paste(devices_OK[[1]], "(without outliers)"))
+                           paste(sel_device_name, "(without outliers)"))
 
 boxplot_BQ_wo_outliers <-
   filter(selection) %>%
@@ -773,12 +873,12 @@ boxplot_BQ_wo_outliers <-
 
 selection <- 
   data %>%
-  filter(device_name == devices_OK[[1]], outlier == 0, whisker == 0) %>%
+  filter(device_name == sel_device_name, outlier == 0, whisker == 0) %>%
   arrange(plan_date)
 
 
 plot_BQ_wo_whisker <- dual_scale_plot(selection, 
-                           paste(devices_OK[[1]], "(without outliers & whiskers)"))
+                           paste(sel_device_name, "(without outliers & whiskers)"))
 
 boxplot_BQ_wo_whisker <-
   filter(selection) %>%
@@ -810,22 +910,23 @@ _How does `delay` behave in the middle 50% of data (IRQ)?_
 
 ```{r dual_scale_plots_HO, fig.width=14, fig.height=8}
 
+sel_device_name <- devices[[4]]
 selection <- 
   data %>%
-  filter(device_name == devices_OK[[2]], outlier == 0) %>%
+  filter(device_name == sel_device_name, outlier == 0) %>%
   arrange(plan_date)
 
 plot_HO_wo_outliers <- dual_scale_plot(selection, 
-                           paste(devices_OK[[2]], "(without outliers)"))
+                           paste(sel_device_name, "(without outliers)"))
 
 selection <- 
   data %>%
-  filter(device_name == devices_OK[[2]], outlier == 0, whisker == 0) %>%
+  filter(device_name == sel_device_name, outlier == 0, whisker == 0) %>%
   arrange(plan_date)
 
 
 plot_HO_wo_whisker <- dual_scale_plot(selection, 
-                           paste(devices_OK[[2]], "(without outliers & whiskers)"))
+                           paste(sel_device_name, "(without outliers & whiskers)"))
 
 
 plot_HO_wo_outliers
@@ -836,23 +937,23 @@ plot_HO_wo_whisker
 #### Motorola Moto G
 
 ```{r dual_scale_plots_MO, fig.width=14, fig.height=8}
-
+sel_device_name <- devices[[5]]
 selection <- 
   data %>%
-  filter(device_name == devices_OK[[3]], outlier == 0) %>%
+  filter(device_name == sel_device_name, outlier == 0) %>%
   arrange(plan_date)
 
 plot_MO_wo_outliers <- dual_scale_plot(selection, 
-                           paste(devices_OK[[3]], "(without outliers)"))
+                           paste(sel_device_name, "(without outliers)"))
 
 selection <- 
   data %>%
-  filter(device_name == devices_OK[[3]], outlier == 0, whisker == 0) %>%
+  filter(device_name == sel_device_name, outlier == 0, whisker == 0) %>%
   arrange(plan_date)
 
 
 plot_MO_wo_whisker <- dual_scale_plot(selection, 
-                           paste(devices_OK[[3]], "(without outliers & whiskers)"))
+                           paste(sel_device_name, "(without outliers & whiskers)"))
 
 
 plot_MO_wo_outliers

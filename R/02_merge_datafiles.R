@@ -81,10 +81,12 @@ data_merged <-
   data_merged %>%
   mutate(exec_date = as_datetime(exec_timestamp/1000, tz="Europe/Madrid"),
          plan_date = as_datetime(planning_timestamp/1000, tz="Europe/Madrid"),
+         plan_second = lubridate::second(plan_date),
          plan_minute = lubridate::minute(plan_date),
          plan_hour = lubridate::hour(plan_date),
          plan_day = lubridate::day(plan_date),
          plan_month = lubridate::month(plan_date),
+         exec_second = lubridate::second(exec_date),
          exec_minute = lubridate::minute(exec_date),
          exec_hour = lubridate::hour(exec_date),
          exec_day = lubridate::day(exec_date),
