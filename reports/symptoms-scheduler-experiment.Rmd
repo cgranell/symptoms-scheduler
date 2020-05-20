@@ -808,7 +808,7 @@ Basic assumption: Higher accuracy = lower `delay`
 
 To evaluate it, we plot timestamps as follows (being "n" each row in the data file): 
 
-- planning timestamp(n) - execution timestamp(n) [the current one, which displays framework overhead]
+- execution timestamp(n) -planning timestamp(n+1) [the current one, which displays framework overhead]
 - planning timestamp(n-1) - planning timestamp(n) [in order to detect wrong planning timestamp values] 
 - execution timestamp(n-1) - execution timestamp(n) [this last one should be reliable]
 
@@ -822,7 +822,7 @@ We calculate `planning timestamp(n-1) - planning timestamp(n)` to detect wrong p
 diff_times <- 
   data %>%
   select(step, scheduler, device_id, device_name, delay, plan_date, exec_date) %>%
-  arrange(plan_date)
+  arrange(step) # TODO: step
 
 diff_times <- 
   diff_times %>%
@@ -830,8 +830,14 @@ diff_times <-
   mutate(plan_date_lagged = lag(plan_date),
          plan_date_diff = as.numeric(as.duration(interval(plan_date_lagged, plan_date)) / dseconds(1)),
          plan_date_diff = ifelse(is.na(plan_date_diff), 0, round(plan_date_diff, 3)),
-         # plan_date_cum = cumsum(plan_date_diff),
-         exec_date_lagged = dplyr::lag(exec_date),
+         plan_date_diff_cum = cumsum(plan_date_diff/60)) # units: minutes
+         
+         
+diff_times <- 
+  diff_times %>%
+  group_by(scheduler, device_id) %>%
+  arrange(exec_date) %>% # TODO: step
+  mutate(exec_date_lagged = dplyr::lag(exec_date),
          exec_date_diff = as.numeric(as.duration(interval(exec_date_lagged, exec_date)) / dseconds(1)),
          exec_date_diff = round(exec_date_diff, 3))
 
@@ -967,10 +973,10 @@ kable(plan_date_outliers %>%
 
 
 
-```{r plan_difffig.height=8, fig.width=12}
+```{r plan_date_diff_outliers_plot, fig.height=16, fig.width=16}
 
 diff_times %>%
-  filter(plan_date_diff_outlier ==1, plan_date_diff < 200) %>%  #TODO: What I do with super outliers?
+  filter(plan_date_diff_outlier ==1, plan_date_diff < 200) %>%  #TODO: What do I do with super outliers?
   ggplot(aes(x = step, color=factor(device_name))) +
     # geom_point(aes(y = delay), alpha = 0.6, size = 0.5) +
     geom_point(aes(y = plan_date_diff), alpha = 0.3, size = 0.7) +
@@ -987,6 +993,28 @@ diff_times %>%
 
 ```
 
+
+
+
+```{r plan_date_diff_cumsum_plot, fig.height=16, fig.width=16}
+
+diff_times %>%
+  # filter(plan_date_diff_outlier ==1)  %>%  #TODO: What do I do with super outliers?
+  ggplot(aes(x = step, color=factor(device_name))) +
+    # geom_point(aes(y = delay), alpha = 0.6, size = 0.5) +
+    geom_line(aes(y = plan_date_diff_cum), alpha = 1, size = 0.5) +
+    # geom_point(aes(y = exec_date_diff)) +
+  
+    labs(title="plan_date[n-1] - plan_date[n]",
+         x = "Steps [~1min]") + 
+    scale_y_continuous(name="diff [seconds]") + #, breaks=ybks_delay, limits=ylim_delay) +
+    facet_grid(device_name~scheduler) +
+    theme(legend.title = element_text(size=8), 
+          legend.position="bottom",
+          legend.direction = "horizontal") +
+    theme_bw()
+
+```
 
 
 #### Execution timestamps
@@ -1095,7 +1123,12 @@ diff_times %>%
 
 #### Framework overhead
 
-- execution timestamp(n-1) - execution timestamp(n) [this last one should be reliable]
+- execution timestamp(n) - planning timestamp(n+1)
+
+
+#### Delay
+
+- (planning timestamp(n) - execution timestamp(n)) - 60
 
 
 **BQ Aquaris V**
