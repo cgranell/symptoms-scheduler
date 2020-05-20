@@ -808,7 +808,7 @@ Basic assumption: Higher accuracy = lower `delay`
 
 To evaluate it, we plot timestamps as follows (being "n" each row in the data file): 
 
-- execution timestamp(n) -planning timestamp(n+1) [the current one, which displays framework overhead]
+- execution timestamp(n) - planning timestamp(n+1) [the current one, which displays framework overhead]
 - planning timestamp(n-1) - planning timestamp(n) [in order to detect wrong planning timestamp values] 
 - execution timestamp(n-1) - execution timestamp(n) [this last one should be reliable]
 
@@ -818,19 +818,18 @@ To evaluate it, we plot timestamps as follows (being "n" each row in the data fi
 We calculate `planning timestamp(n-1) - planning timestamp(n)` to detect wrong planning timestamp values. 
 
 ```{r plan_dates_diff}
-# sel_device_name <- devices[[1]]
 diff_times <- 
   data %>%
-  select(step, scheduler, device_id, device_name, delay, plan_date, exec_date) %>%
-  arrange(step) # TODO: step
+  select(step, scheduler, device_id, device_name, delay, plan_date, exec_date)
 
 diff_times <- 
   diff_times %>%
   group_by(scheduler, device_id) %>%
+  arrange(plan_date) %>%
   mutate(plan_date_lagged = lag(plan_date),
          plan_date_diff = as.numeric(as.duration(interval(plan_date_lagged, plan_date)) / dseconds(1)),
          plan_date_diff = ifelse(is.na(plan_date_diff), 0, round(plan_date_diff, 3)),
-         plan_date_diff_cum = cumsum(plan_date_diff/60)) # units: minutes
+         plan_date_diff_cum = cumsum(plan_date_diff))
          
          
 diff_times <- 
@@ -839,7 +838,14 @@ diff_times <-
   arrange(exec_date) %>% # TODO: step
   mutate(exec_date_lagged = dplyr::lag(exec_date),
          exec_date_diff = as.numeric(as.duration(interval(exec_date_lagged, exec_date)) / dseconds(1)),
-         exec_date_diff = round(exec_date_diff, 3))
+         exec_date_diff = ifelse(is.na(exec_date_diff), 0, round(exec_date_diff, 3)), 
+         exec_date_diff_cum = cumsum(exec_date_diff))
+
+# 'delay2' is the new metric
+
+diff_times <- 
+  diff_times %>%
+  mutate(delay2 = exec_date_diff - baseline_delay)
 
 ```
 
@@ -1017,12 +1023,11 @@ diff_times %>%
 ```
 
 
-#### Execution timestamps
+#### Execution timestamps (`delay2`)
 
 - execution timestamp(n-1) - execution timestamp(n) [this last one should be reliable]
 
-```{r}
-
+```{r exec_dates_diff_summary}
 
 col_names <- c("scheduler", "device_name", "min", "quartile1", "median", "quartile3", "max", "mean", "bottom_whisker", "top_whisker")
 summaries_diff <- data.frame(matrix(ncol=length(col_names), nrow = 0))
@@ -1098,7 +1103,7 @@ diff_times %>%
   filter(exec_date_diff < 200) %>%
   ggplot(aes(x = step, color=factor(device_name))) +
     # geom_point(aes(y = delay), alpha = 0.6, size = 0.5) +
-    geom_point(aes(y = exec_date_diff), alpha = 0.3, size = 0.7) +
+    geom_point(aes(y = delay2), alpha = 0.3, size = 0.7) +
 
     labs(title="exec_date[n-1] - exec_date[n]",
          x = "Steps [~1min]") + 
@@ -1129,6 +1134,8 @@ diff_times %>%
 #### Delay
 
 - (planning timestamp(n) - execution timestamp(n)) - 60
+
+
 
 
 **BQ Aquaris V**
