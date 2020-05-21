@@ -1,0 +1,712 @@
+---
+title: "Symptoms - scheduler experiment timestamps (Part II)"
+author: "Carlos Granell, [SyMptOMS team](http://geotec.uji.es/projects/SyMptOMS/), [GEOTEC research group](http://geotec.uji.es/) "
+date: "21/4/2020 (updated `r format(Sys.time(), '%d %B, %Y')`)"
+output: 
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: 4
+---
+
+```{r setup, include=FALSE, eval=TRUE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+This document analyses the self-developed scheduler component in Android-based mobile devices as part of the [SyMptOMS project](http://geotec.uji.es/projects/SyMptOMS/). 
+
+
+## Reproduce notebook
+
+To create the PDF of the computational notebook you can run the following commands in a new R session.
+If you have problems rendering the PDF you can execute each chunk independently in [RStudio](https://rstudio.com/products/rstudio/).
+
+```{r render_with_rmarkdown, eval=FALSE}
+require("knitr")
+require("rmarkdown")
+rmarkdown::render("symptoms-scheduler-experiment-timestamps.Rmd", output_format = "pdf_document")
+```
+
+This document does not install the required R packages by default.
+You can run the script `install.R` to install all required dependencies on a new R installation, or use `install.packages(..)` to install missing R packages.
+
+```{r install_r, eval=FALSE}
+source("R/install.R")
+```
+
+The plots and tables use the packages [`ggplot2`](http://ggplot2.tidyverse.org/), [`knitr::kable()`](https://yihui.name/knitr/) and [`kableExtra`](https://cran.r-project.org/package=kableExtra).
+
+Required libraries and runtime environment description are as follows.
+
+```{r load_libraries, echo=TRUE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(kableExtra)
+library(here)
+# library(googledrive)
+library(lubridate)
+library(stringr)
+library(scales)
+# library(plotly)
+library(grid)
+library(gridBase)
+library(gridExtra)
+library(egg)
+```
+
+
+```{r set_seed}
+# just in case
+set.seed(nchar("Symptoms - scheduler experiment timestamps"))
+```
+
+## Data download
+
+Log files are stored in shared gdrvie folder. This notebook downloads them locally in the folder`data-raw`.
+
+```{r gsheetdata_files}
+
+files <- tibble(
+  experiment = c(rep("#1", 5), rep("#2", 5)),
+  gsheets_name = c("AD_BQ.csv", "AD_NV.csv", "AD_A1.csv", "BA_H9.csv", "BA_MO.csv",
+                   "BA_BQ.csv", "BA_NV.csv", "BA_A1.csv", "AD_H9.csv", "AD_MO.csv"),
+  gsheets_link = c("https://drive.google.com/open?id=1fP9r0S8ORa689yHRtfCtYQothLuGcCw3",
+                   "https://drive.google.com/open?id=1l-vnaT-Smy0SegArIz5A108-IQ2_jmVV",
+                   "https://drive.google.com/open?id=1gzk1ezN5t5yBv2RnbznUqvalDx97eu3o",
+                   "https://drive.google.com/open?id=1BLXO4Rvz6ppWFJe5oN9Y0hKh__ypofxk",
+                   "https://drive.google.com/open?id=1RizGjKR8QLOdJna7qGPP7dYX9WWAysO4",
+                   "https://drive.google.com/open?id=1rfaooLZ0Up0gNx1SCA92TV1JFxcLU0sk",
+                   "https://drive.google.com/open?id=1_KIXX5FGXv7MO37QbUDnd_KGqiGihiMI",
+                   "https://drive.google.com/open?id=1LezrtyB9i4K7cQsmI78E0v_KaOyhZcXI",
+                   "https://drive.google.com/open?id=1ISjsfSLZt6n9miryQtDr-tsZV9bfbCDT",
+                   "https://drive.google.com/open?id=1bx2RVNz05qVKGr-32GI-ZIOKQWlqKBPz")
+)
+```
+
+```{r gsheetdata_files_table}
+kable(files,
+      format = "html",
+      booktabs = TRUE,
+      caption = "Table. List of raw data files.") %>%
+  kable_styling(full_width = TRUE, bootstrap_options = c("striped", "bordered", "condensed"))
+
+```
+
+
+```{r gsheetdata_download, eval=FALSE}
+for (f in 1:nrow(files)) {
+  gfile_name <-files$gsheets_name[f]
+  gfile_id <- googledrive::as_id(files$gsheets_link[f])
+  
+  drive_download(file = gfile_id, 
+                 path = here::here("data-raw", gfile_name), 
+                 overwrite = TRUE, verbose = FALSE)
+}
+
+```
+
+```{r drive_disconnect, eval=FALSE}
+drive_deauth()
+```
+
+
+## Data preparation
+
+Raw data files are cleaned and merged together into a single file stored in the folder `data`. New fields such as dates breakdown are computed too. 
+
+```{r merge_datafiles_defs}
+
+schedulers <- c("AD" = "Advanced", 
+                "BA" = "Basic")
+
+devices <- c("BQ" = "BQ Aquaris V",
+             "NV" = "Nvidia Shield Tablet",
+             "A1" = "Xiaomi Mi A1",
+             "H9" = "Honor 9",
+             "MO" = "Motorola Moto G")
+
+baseline_delay <- 60
+```
+
+
+```{r merge_datafiles, eval=FALSE}
+
+data_path <- here::here("data-raw")
+file_names <- list.files(path  = data_path)
+file_paths <- list.files(path = data_path, full.names = TRUE)
+
+data_merged <- data.frame()
+
+get_experiment_id <- function(filename) {
+  fullname <- paste0(filename, ".csv")
+  files %>%
+    filter(gsheets_name == fullname) %>%
+    select(experiment) %>%
+    pull
+}
+
+for (f in 1:length(file_names)) {
+  filename <- stringr::str_sub(file_names[f], 1, 5)
+  exp_id <- get_experiment_id(filename)
+  
+  parts <- stringr::str_split(filename, "_", simplify = TRUE)
+  
+  scheduler_id = parts[1]
+  scheduler_name <- schedulers[[scheduler_id]]
+  device_id <- parts[2]
+  device_name <- devices[[device_id]]
+  device_desc <- paste0(scheduler_name, " - ", device_name)
+  
+  data_temp <- read_csv(file_paths[f], col_names = TRUE, 
+                        cols(
+                          battery = col_double(),
+                          exec_timestamp = col_double(),
+                          planning_timestamp = col_double(),
+                          task = col_character()
+                        ))
+
+
+  data_temp <- 
+    data_temp %>%
+    mutate(exp_id = exp_id,
+           scheduler = scheduler_name,
+           device_id = device_id,
+           device_name = device_name,
+           device_desc = device_desc) 
+  
+  data_merged <- rbind(data_merged, data_temp)
+}       
+
+
+data_merged <- 
+  data_merged %>%
+  mutate(exec_date = as_datetime(exec_timestamp/1000, tz="Europe/Madrid"),
+         plan_date = as_datetime(planning_timestamp/1000, tz="Europe/Madrid"),
+         plan_minute = lubridate::minute(plan_date),
+         plan_hour = lubridate::hour(plan_date),
+         plan_day = lubridate::day(plan_date),
+         plan_month = lubridate::month(plan_date),
+         exec_minute = lubridate::minute(exec_date),
+         exec_hour = lubridate::hour(exec_date),
+         exec_day = lubridate::day(exec_date),
+         exec_month = lubridate::month(exec_date),
+         time_period = ifelse(between(plan_hour,0, 7), "nighttime", "daytime"))
+
+
+# Delay units: seconds
+data_merged <-
+  data_merged %>%
+  group_by(device_id) %>%
+  arrange(plan_date) %>%
+  mutate(step = row_number(),
+         delay = (as.duration(interval(plan_date, exec_date)) - baseline_delay) / dseconds(1))
+
+
+data_path <- here::here("data", "data.csv")
+write_csv(data_complete, data_path)
+data_path <- here::here("data", "data.rds")
+saveRDS(data_complete, data_path)
+
+#TODO: shiny app is deprecated
+# data_path <- here::here("webapp","data", "data.csv")
+# write_csv(data_complete, data_path)
+# data_path <- here::here("webapp","data", "data.rds")
+# saveRDS(data_complete, data_path)
+
+```
+
+__Key Variables__:
+
+- quantitative (interval)
+
+  - `plan_date` (_datetime_): task planning time.
+  - `exec_date` (_datetime_): task execution time.  
+- quantitative (ratio)
+
+  - `delay` (_numeric_): execution delay in seconds ((`exec_date` - `plan_date`) - `r baseline_delay`).
+- categorital (ordinal)
+
+  - `battery`(_numeric_): battery level
+- categorical (nominal)
+
+  - `device_id`/`device_name`: device identifier/name
+  - `exp_id`: experiment identifier.
+  - `scheduler`: scheduler type.
+  
+
+## Exploratory analysis
+
+
+```{r load_assessdata, warning=FALSE}
+assessment_file <- here::here("data", "data.rds")
+data <- readRDS(assessment_file)
+
+n_observations <- nrow(data) 
+
+```
+
+
+### Which one of the analysed schedulers is more accurate? (Distribution of `delay`)
+
+
+```{r dual_scale_plots_function}
+source(here::here("R", "dual_scale_plot.R"))
+```
+
+Basic assumption: Higher accuracy = lower `delay`  
+
+To evaluate it, we plot timestamps as follows (being "n" each row in the data file): 
+
+- execution timestamp(n) - planning timestamp(n+1) [the current one, which displays framework overhead]
+- planning timestamp(n-1) - planning timestamp(n) [in order to detect wrong planning timestamp values] 
+- execution timestamp(n-1) - execution timestamp(n) [this last one should be reliable]
+
+
+#### Analsysis of consecutive planning timestamps 
+
+We calculate `planning timestamp(n-1) - planning timestamp(n)` to detect wrong planning timestamp values. 
+
+```{r plan_dates_diff}
+diff_times <- 
+  data %>%
+  select(step, scheduler, device_id, device_name, delay, plan_date, exec_date)
+
+diff_times <- 
+  diff_times %>%
+  group_by(scheduler, device_id) %>%
+  arrange(plan_date) %>%
+  mutate(plan_date_lagged = lag(plan_date),
+         plan_date_diff = as.numeric(as.duration(interval(plan_date_lagged, plan_date)) / dseconds(1)),
+         plan_date_diff = ifelse(is.na(plan_date_diff), 0, round(plan_date_diff, 3)),
+         plan_date_diff_cum = cumsum(plan_date_diff))
+         
+         
+diff_times <- 
+  diff_times %>%
+  group_by(scheduler, device_id) %>%
+  arrange(exec_date) %>% # TODO: step
+  mutate(exec_date_lagged = dplyr::lag(exec_date),
+         exec_date_diff = as.numeric(as.duration(interval(exec_date_lagged, exec_date)) / dseconds(1)),
+         exec_date_diff = ifelse(is.na(exec_date_diff), 0, round(exec_date_diff, 3)), 
+         exec_date_diff_cum = cumsum(exec_date_diff))
+
+# 'delay2' is the new metric
+
+diff_times <- 
+  diff_times %>%
+  mutate(delay2 = exec_date_diff - baseline_delay)
+
+```
+
+
+```{r plan_dates_diff_summary}
+
+# https://towardsdatascience.com/understanding-boxplots-5e2df7bcbd51
+# Understanding Boxplot. What is a outlier?
+# Min., 1st Qu., Median, Mean, 3rd Qu., Max.
+
+col_names <- c("scheduler", "device_name", "min", "quartile1", "median", "quartile3", "max", "mean", "bottom_whisker", "top_whisker")
+summaries_diff <- data.frame(matrix(ncol=length(col_names), nrow = 0))
+colnames(summaries_diff) <- col_names
+
+for (s in 1:length(schedulers)) {
+  for (d in 1:length(devices)) {
+    
+    diff_times %>%
+      filter(scheduler == schedulers[[s]]) %>%
+      filter(device_name == devices[[d]]) %>%
+      select(device_id, device_name, plan_date_diff) -> one
+    
+    summary_row <- data.frame(matrix(ncol=length(col_names), nrow = 0))
+    colnames(summary_row) <- col_names
+    
+    mean <- mean(one$plan_date_diff, na.rm = TRUE)
+    summary_boxplot <- boxplot(one$plan_date_diff, plot = FALSE) 
+    bottom_whisker <- summary_boxplot$stats[1,1]
+    top_whisker <-  summary_boxplot$stats[5,1]
+    
+    summary_row[1,] <- c(schedulers[[s]], devices[[d]], fivenum(one$plan_date_diff), mean, bottom_whisker, top_whisker)
+
+    summaries_diff <- rbind(summaries_diff, summary_row)
+  }
+}
+
+summaries_diff <- 
+  summaries_diff %>%
+  mutate_at(vars(c("scheduler", "device_name")), ~as.character(.)) %>% 
+  mutate_at(vars(-c("scheduler", "device_name")), ~as.numeric(.)) %>%
+  mutate_if(is.numeric, ~round(., 3))
+
+# glimpse(summaries_diff)
+
+data %>%
+  group_by(exp_id, scheduler, device_name) %>%
+  summarise(n = n(),
+            start_datetime = min(plan_date),
+            end_datetime = max(plan_date)) %>%
+  inner_join(summaries_diff, by=c("scheduler", "device_name")) %>%
+  arrange(exp_id, scheduler, device_name) -> summaries_diff_table
+
+kable(summaries_diff_table %>%
+        select(`# exp` = exp_id,
+               `Type scheduler` = scheduler,
+               `Device` = device_name,
+               `# records` = n,
+               `Start` = start_datetime,
+               `End` = end_datetime,
+               `Min` = min,
+               `Bottom whisker`= bottom_whisker,
+               `1st Qu.` = quartile1,
+               `Median` = median,
+               `Mean` = mean,
+               `3rd Qu.` = quartile3,
+               `Top whisker`= top_whisker,
+               `Max` = max),
+      format = "html",
+      booktabs = TRUE,
+      caption = "Table. Descriptive statistics of 'planning timestamp(n-1) - planning timestamp(n)' [in order to detect wrong planning timestamp values] per scheduler/device.") %>%
+  kable_styling(full_width = TRUE, bootstrap_options = c("striped", "bordered", "condensed")) %>%
+  collapse_rows(columns = 1:2, valign = "top")
+  # row_spec(6, color = "white", background = "orange") %>%
+  # row_spec(9:10, color = "white", background = "#D7261E")
+
+```
+
+
+
+
+```{r plan_date_diff_outliers}
+diff_times <-
+  diff_times %>%
+  left_join(summaries_diff, by=c("scheduler", "device_name")) %>%
+  mutate(plan_date_diff_outlier_pos = ifelse(plan_date_diff > top_whisker, 1, 0)) %>%
+  mutate(plan_date_diff_outlier_neg = ifelse(plan_date_diff < bottom_whisker, 1, 0)) %>%
+  mutate(plan_date_diff_outlier = ifelse((plan_date_diff_outlier_pos == 1 | plan_date_diff_outlier_neg == 1), 1, 0)) %>%
+  arrange(device_name, step)
+```
+
+```{r plan_date_diff_outliers_table}
+plan_date_outliers <- 
+  filter(diff_times, plan_date_diff_outlier==1) %>%
+  group_by(scheduler, device_name) %>%
+  summarise(n = n()) %>%
+  arrange(device_name, scheduler)
+
+plan_date_outliers_pos <- 
+  filter(diff_times, plan_date_diff_outlier_pos==1) %>%
+  group_by(scheduler, device_name) %>%
+  summarise(n_pos = n()) %>%
+  arrange(device_name, scheduler)
+
+plan_date_outliers_neg <- 
+  filter(diff_times, plan_date_diff_outlier_neg==1) %>%
+  group_by(scheduler, device_name) %>%
+  summarise(n_neg = n()) %>%
+  arrange(device_name, scheduler)
+
+plan_date_outliers <- 
+  plan_date_outliers %>% 
+  left_join(plan_date_outliers_pos, by = c("scheduler", "device_name")) %>%
+  left_join(plan_date_outliers_neg, by = c("scheduler", "device_name"))
+  
+
+kable(plan_date_outliers %>%
+        select(`Device` = device_name, 
+               `Type scheduler` = scheduler,
+               `# outliers` = n, 
+               `# outliers positive` = n_pos,
+               `# outliers negative` = n_neg),
+      format = "html",
+      booktabs = TRUE,
+      caption = "Table. Outliers of consecutive planning timestamps per scheduler/device.") %>%
+  kable_styling(full_width =FALSE,position = "left", bootstrap_options = c("striped", "bordered", "condensed"))
+  # row_spec(c(8,10), color = "white", background = "#D7261E") %>%
+  # row_spec(3, color = "white", background = "orange")
+
+```
+
+
+
+
+```{r plan_date_diff_outliers_plot, fig.height=16, fig.width=16}
+
+diff_times %>%
+  filter(plan_date_diff_outlier ==1, plan_date_diff < 200) %>%  #TODO: What do I do with super outliers?
+  ggplot(aes(x = step, color=factor(device_name))) +
+    # geom_point(aes(y = delay), alpha = 0.6, size = 0.5) +
+    geom_point(aes(y = plan_date_diff), alpha = 0.3, size = 0.7) +
+    # geom_point(aes(y = exec_date_diff)) +
+  
+    labs(title="plan_date[n-1] - plan_date[n]",
+         x = "Steps [~1min]") + 
+    scale_y_continuous(name="diff [seconds]") + #, breaks=ybks_delay, limits=ylim_delay) +
+    facet_grid(device_name~scheduler) +
+    theme(legend.title = element_text(size=8), 
+          legend.position="bottom",
+          legend.direction = "horizontal") +
+    theme_bw()
+
+```
+
+
+
+
+```{r plan_date_diff_cumsum_plot, fig.height=16, fig.width=16}
+
+diff_times %>%
+  # filter(plan_date_diff_outlier ==1)  %>%  #TODO: What do I do with super outliers?
+  ggplot(aes(x = step, color=factor(device_name))) +
+    # geom_point(aes(y = delay), alpha = 0.6, size = 0.5) +
+    geom_line(aes(y = plan_date_diff_cum), alpha = 1, size = 0.5) +
+    # geom_point(aes(y = exec_date_diff)) +
+  
+    labs(title="plan_date[n-1] - plan_date[n]",
+         x = "Steps [~1min]") + 
+    scale_y_continuous(name="diff [seconds]") + #, breaks=ybks_delay, limits=ylim_delay) +
+    facet_grid(device_name~scheduler) +
+    theme(legend.title = element_text(size=8), 
+          legend.position="bottom",
+          legend.direction = "horizontal") +
+    theme_bw()
+
+```
+
+
+#### Execution timestamps (`delay2`)
+
+- execution timestamp(n-1) - execution timestamp(n) [this last one should be reliable]
+
+```{r exec_dates_diff_summary}
+
+col_names <- c("scheduler", "device_name", "min", "quartile1", "median", "quartile3", "max", "mean", "bottom_whisker", "top_whisker")
+summaries_diff <- data.frame(matrix(ncol=length(col_names), nrow = 0))
+colnames(summaries_diff) <- col_names
+
+for (s in 1:length(schedulers)) {
+  for (d in 1:length(devices)) {
+    
+    diff_times %>%
+      filter(scheduler == schedulers[[s]]) %>%
+      filter(device_name == devices[[d]]) %>%
+      select(device_id, device_name, exec_date_diff) -> one
+    
+    summary_row <- data.frame(matrix(ncol=length(col_names), nrow = 0))
+    colnames(summary_row) <- col_names
+    
+    mean <- mean(one$exec_date_diff, na.rm = TRUE)
+    summary_boxplot <- boxplot(one$exec_date_diff, plot = FALSE) 
+    bottom_whisker <- summary_boxplot$stats[1,1]
+    top_whisker <-  summary_boxplot$stats[5,1]
+    
+    summary_row[1,] <- c(schedulers[[s]], devices[[d]], fivenum(one$exec_date_diff), mean, bottom_whisker, top_whisker)
+
+    summaries_diff <- rbind(summaries_diff, summary_row)
+  }
+}
+
+summaries_diff <- 
+  summaries_diff %>%
+  mutate_at(vars(c("scheduler", "device_name")), ~as.character(.)) %>% 
+  mutate_at(vars(-c("scheduler", "device_name")), ~as.numeric(.)) %>%
+  mutate_if(is.numeric, ~round(., 3))
+
+# glimpse(summaries_diff)
+
+data %>%
+  group_by(exp_id, scheduler, device_name) %>%
+  summarise(n = n(),
+            start_datetime = min(plan_date),
+            end_datetime = max(plan_date)) %>%
+  inner_join(summaries_diff, by=c("scheduler", "device_name")) %>%
+  arrange(exp_id, scheduler, device_name) -> summaries_diff_table
+
+kable(summaries_diff_table %>%
+        select(`# exp` = exp_id,
+               `Type scheduler` = scheduler,
+               `Device` = device_name,
+               `# records` = n,
+               `Start` = start_datetime,
+               `End` = end_datetime,
+               `Min` = min,
+               `Bottom whisker`= bottom_whisker,
+               `1st Qu.` = quartile1,
+               `Median` = median,
+               `Mean` = mean,
+               `3rd Qu.` = quartile3,
+               `Top whisker`= top_whisker,
+               `Max` = max),
+      format = "html",
+      booktabs = TRUE,
+      caption = "Table. Descriptive statistics of 'execution timestamp(n-1) - execution timestamp(n)' per scheduler/device.") %>%
+  kable_styling(full_width = TRUE, bootstrap_options = c("striped", "bordered", "condensed")) %>%
+  collapse_rows(columns = 1:2, valign = "top")
+  # row_spec(6, color = "white", background = "orange") %>%
+  # row_spec(9:10, color = "white", background = "#D7261E")
+
+```
+
+
+```{r fig.height=8, fig.width=12}
+
+diff_times %>%
+  filter(exec_date_diff < 200) %>%
+  ggplot(aes(x = step, color=factor(device_name))) +
+    # geom_point(aes(y = delay), alpha = 0.6, size = 0.5) +
+    geom_point(aes(y = delay2), alpha = 0.3, size = 0.7) +
+
+    labs(title="exec_date[n-1] - exec_date[n]",
+         x = "Steps [~1min]") + 
+    # scale_x_datetime(breaks = scales::date_breaks("12 hours"),
+    #                  labels = scales::date_format("%d-%m %H:%M", tz="CET"),
+    #                  expand = c(0,0)) +
+    scale_y_continuous(name="diff [seconds]") + #, breaks=ybks_delay, limits=ylim_delay) +
+    
+    # guides(color=guide_legend(title="Scheduler",
+    #                           # override.aes=list(fill=NA),
+    #                           nrow=2)) + 
+    # 
+    # guides(color=FALSE) +
+    facet_grid(device_name~scheduler) +
+    theme(legend.title = element_text(size=8), 
+          legend.position="bottom",
+          legend.direction = "horizontal") +
+    theme_bw()
+
+```
+
+
+#### Framework overhead
+
+- execution timestamp(n) - planning timestamp(n+1)
+
+
+#### Delay
+
+- (planning timestamp(n) - execution timestamp(n)) - 60
+
+
+
+
+**BQ Aquaris V**
+
+_How does `delay` behave in the middle 50% of data (IRQ)?_
+
+Advance scheduler shows worse delay times. In addition, the central cluster shows steadily increased values of `delay` over time. In contrast, the basic scheduler shows uniform delays over time adn concentrated aoru 0.3 sec. Teh basic scheduler's boxplot shows a thinner box than the advance scheduler's. There seems no clear relationship between battery levels and delays, which suggests that low battery levels do not impact (or at least not significally) on the planned execution time of a task. 
+
+```{r dual_scale_plots_BQ, fig.width=14, fig.height=10}
+sel_device_name <- devices[[1]]
+selection <- 
+  data %>%
+  filter(device_name == sel_device_name, outlier == 0) %>%
+  arrange(plan_date)
+
+
+plot_BQ_wo_outliers <- dual_scale_plot(selection, 
+                           paste(sel_device_name, "(without outliers)"))
+
+boxplot_BQ_wo_outliers <-
+  filter(selection) %>%
+    ggplot(aes(x = device_id, y = delay, fill=factor(exp_id))) + 
+    geom_boxplot(alpha = 0.7) +
+    facet_grid(~scheduler) +
+    theme_bw() +
+    # scale_fill_hue() +
+    guides(fill=FALSE)
+
+selection <- 
+  data %>%
+  filter(device_name == sel_device_name, outlier == 0, whisker == 0) %>%
+  arrange(plan_date)
+
+
+plot_BQ_wo_whisker <- dual_scale_plot(selection, 
+                           paste(sel_device_name, "(without outliers & whiskers)"))
+
+boxplot_BQ_wo_whisker <-
+  filter(selection) %>%
+    ggplot(aes(x = device_id, y = delay, fill=factor(exp_id))) + 
+    geom_boxplot(alpha = 0.7,
+                 outlier.colour = "#1F3552", outlier.shape = 20) +
+    facet_grid(~scheduler) +
+    theme_bw() +
+    # scale_fill_hue() +
+    guides(fill=FALSE)
+
+
+ggarrange(plot_BQ_wo_outliers, boxplot_BQ_wo_outliers, 
+          plot_BQ_wo_whisker, boxplot_BQ_wo_whisker, 
+          widths = c(3, 1), heights = c(3, 3))
+
+```
+
+
+_What happens when battery is going to be fully recharged?_
+
+
+
+
+**Honor 9**
+
+_How does `delay` behave in the middle 50% of data (IRQ)?_
+
+
+```{r dual_scale_plots_HO, fig.width=14, fig.height=8}
+
+sel_device_name <- devices[[4]]
+selection <- 
+  data %>%
+  filter(device_name == sel_device_name, outlier == 0) %>%
+  arrange(plan_date)
+
+plot_HO_wo_outliers <- dual_scale_plot(selection, 
+                           paste(sel_device_name, "(without outliers)"))
+
+selection <- 
+  data %>%
+  filter(device_name == sel_device_name, outlier == 0, whisker == 0) %>%
+  arrange(plan_date)
+
+
+plot_HO_wo_whisker <- dual_scale_plot(selection, 
+                           paste(sel_device_name, "(without outliers & whiskers)"))
+
+
+plot_HO_wo_outliers
+
+plot_HO_wo_whisker
+```
+
+**Motorola Moto G**
+
+```{r dual_scale_plots_MO, fig.width=14, fig.height=8}
+sel_device_name <- devices[[5]]
+selection <- 
+  data %>%
+  filter(device_name == sel_device_name, outlier == 0) %>%
+  arrange(plan_date)
+
+plot_MO_wo_outliers <- dual_scale_plot(selection, 
+                           paste(sel_device_name, "(without outliers)"))
+
+selection <- 
+  data %>%
+  filter(device_name == sel_device_name, outlier == 0, whisker == 0) %>%
+  arrange(plan_date)
+
+
+plot_MO_wo_whisker <- dual_scale_plot(selection, 
+                           paste(sel_device_name, "(without outliers & whiskers)"))
+
+
+plot_MO_wo_outliers
+
+plot_MO_wo_whisker
+```
+
+
+See the [shiny app](https://cgranell.shinyapps.io/symptoms-scheduler/)! (TO BE UPDATED)
+
+
+
+
+
+

@@ -192,29 +192,13 @@ data_merged <-
          time_period = ifelse(between(plan_hour,0, 7), "nighttime", "daytime"))
 
 
-# Delay time is in seconds
+# Delay units: seconds
 data_merged <-
   data_merged %>%
   group_by(device_id) %>%
   arrange(plan_date) %>%
   mutate(step = row_number(),
          delay = (as.duration(interval(plan_date, exec_date)) - baseline_delay) / dseconds(1))
-
-
-# Outliers
-# means <- 
-#   data_merged %>%
-#   group_by(device_id) %>%
-#   summarise(mean = round(mean(delay), 3),
-#             sd = round(sd(delay), 3),
-#             lo = round(mean - 2*sd, 3),
-#             hi = round(mean + 2*sd, 3))
-# 
-# data_complete <- 
-#   left_join(data_merged, means, by="device_id") %>%
-#   mutate(outlier = ifelse((delay < lo | delay > hi), "yes", "no")) %>%
-#   arrange(device_id, plan_date)
-  
 
 data_path <- here::here("data", "data.csv")
 write_csv(data_complete, data_path)
