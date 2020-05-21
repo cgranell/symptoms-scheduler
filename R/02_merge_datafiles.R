@@ -95,7 +95,7 @@ data_merged <-
 # Delay time is in seconds
 data_merged <-
   data_merged %>%
-  group_by(device_id) %>%
+  group_by(scheduler, device_id) %>%
   arrange(plan_date) %>%
   mutate(step = row_number(),
          delay = (as.duration(interval(plan_date, exec_date)) - baseline_delay) / dseconds(1),
