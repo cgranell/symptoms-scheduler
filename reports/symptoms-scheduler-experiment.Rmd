@@ -781,6 +781,45 @@ outliers_neg_MO_bubblechart
 
 
 
+#### Advanced scheduler vs basic scheduler
+
+```{r}
+#TODO: agrupar datos por scheduler, y mostrar bubble plot. 
+sel_scheduler <- schedulers[[1]]
+n_outliers_AD <- nrow(filter(data, outlier==1, scheduler ==sel_scheduler))
+n_outliers_pos_MO <- nrow(filter(data, outlier_pos==1, scheduler ==sel_scheduler))
+n_outliers_neg_AD <- nrow(filter(data, outlier_neg==1, scheduler ==sel_scheduler))
+
+outliers_scheduler <- 
+  filter(data, outlier==1) %>%
+  group_by(exp_id, scheduler, plan_month, plan_day, plan_hour) %>%
+  summarise(n = n()) %>%
+  mutate(date = lubridate::ymd(paste0("2020-",
+                                        str_pad(plan_month, width=2, side="left", pad="0"),"-", 
+                                        plan_day)))
+```
+
+
+```{r fig.height=14, fig.width=18}
+title <- paste0("Count of (ALL) outliers grouped by hour (N=", n_outliers, ")")
+
+outliers_scheduler %>%
+  # filter(exp_id=="#1") %>%
+  ggplot(aes(x=date, y=plan_hour)) +
+  geom_point(aes(size=n, color=factor(scheduler)), alpha=0.2, na.rm = TRUE) +
+  geom_text(aes(label=n), color="black", size=2, na.rm = TRUE) +
+  scale_size_area(max_size=15) +
+  scale_y_continuous(breaks = seq(0,23)) +
+  scale_x_date(breaks = scales::date_breaks("1 day"),
+               labels = scales::date_format("%d-%m", tz="CET")) +
+  facet_wrap(~scheduler, nrow = 2) +
+  theme_minimal() +
+  labs(title = title)
+
+
+
+```
+ 
 
 ### Does the battery level influence timely alarm execution? (Distribution of `delay` over `battery` - without outliers)
 
