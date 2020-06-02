@@ -61,7 +61,7 @@ set.seed(nchar("Symptoms - scheduler experiment"))
 
 ## Data download
 
-Log files are stored in shared gdrvie folder. This notebook downloads them locally in the folder`data-raw`.
+Log files are stored in shared gdrvie folder. This notebook downloads them locally in the folder `data-raw`.
 
 ```{r gsheetdata_files}
 
@@ -219,17 +219,20 @@ __Key Variables__:
 
   - `plan_date` (_datetime_): task planning time.
   - `exec_date` (_datetime_): task execution time.  
+
 - quantitative (ratio)
 
   - `delay` (_numeric_): execution delay in seconds ((`exec_date` - `plan_date`) - `r baseline_delay`).
+
 - categorital (ordinal)
 
   - `battery`(_numeric_): battery level
+
 - categorical (nominal)
 
   - `device_id`/`device_name`: device identifier/name
-  - `exp_id`: experiment identifier.
-  - `scheduler`: scheduler type.
+  - `exp_id`: experiment identifier
+  - `scheduler`: scheduler type
   
 
 ## Exploratory analysis
@@ -343,7 +346,7 @@ n_irq <- nrow(filter(data, outlier == 0 & whisker == 0))
 
 ```
 
-**Observations**:
+**Observations on the above table **:
 
 - `r scales::comma(n_observations, big.mark = ".")` records in total. 
 
@@ -358,11 +361,11 @@ n_irq <- nrow(filter(data, outlier == 0 & whisker == 0))
 - `Xiaomi Mi A1` has stopped triggering alarms on **2020-04-23 00:52:00** when running the basic scheduler. An explanation may be that Huawei/Honor smartphones on Android 9+ have a Launch Records where the OS records how much times an app has been launched by itself, so the OS has the possibility to detect this kind of apps. In these smartphones, Huawei also introduced a new task killer (Power Genius) which kills everything that is not whitelisted by Huawei, and does not give users any configuration options. Therefore, the Power Genius uses the information from the Launch Records to kill the scheduled alarms
 
 
-### Which one of the analysed schedulers is more reliable? (Distribution of outliers)
+### Q1: Which one of the analysed schedulers is more reliable? (Distribution of outliers)
 
-In mental health intervetions, to have a predictable execution of planned actions is preferred since these notifications and/or alerts are delivered at the right moment. It is inconceivable, for example, that a patient gets a notification (action) 1 minute later than the event (she walks past a gambling  hall) that triggered it, because the patient could be dozens of meters away from the place of interest or, even worse, walked into that place. Therefore, closing the gap between the triggered event and the action is critical (time matters), especially because time and space/place must be in synchrony. If these tww diemsion are not in synchrony, the intervetion becomes less effective.
+In mental health interventions, to have a predictable execution of planned actions is mostly preferred which means that notifications and/or alerts are delivered to patients at the right moment. It is inconceivable, for example, that a patient gets a notification (e.g. action, psyco content, etc.) 1 minute later than the event (e..g passing nearby a gambling  hall) that triggered it; the patient could be dozens of meters away from the place of interest or, even worse, walked into that "no-desirable" place. Therefore, closing the "temporal" gap between the triggered event and the action is critical (time matters), especially because time and space/place must be in synchrony in mental health EMIs. If these two dimensions are not in synchrony, the intervetion becomes far less effective.
 
-Given that average response time (delay) is similar in all devices (< 1second), outliers are a good candidate to study reliability. Fewer outliers would mean responses (delay) more predictable. Therefore, high values and/or frequent outliers would signal lack of synchrony between space/place and time dimensions in an intervention.
+Given that average response time (delay) is similar in all devices (< 1 second), outliers are a good candidate to study reliability. In other words, if a scheduler leads to fewer outliers (in terms of delay) would mean that planned actions are more stable and predictable over time/space and, consequently, that scheduler does a good job. On the other hand, a high number of and/or frequent outliers would signal lack of synchrony between space/place and time dimensions in an intervention, resulting in a less suitable scheduler for EMI/A.
 
 ```{r outliers_table}
 outliers <- 
@@ -399,13 +402,24 @@ kable(outliers %>%
       format = "html",
       booktabs = TRUE,
       caption = "Table. Outliers per scheduler/device.") %>%
-  kable_styling(full_width =FALSE,position = "left", bootstrap_options = c("striped", "bordered", "condensed")) %>%
+  kable_styling(full_width = TRUE, position = "left", bootstrap_options = c("striped", "bordered", "condensed")) %>%
   # collapse_rows(columns = 1, valign = "middle") %>%
   row_spec(c(8,10), color = "white", background = "#D7261E") %>%
   row_spec(3, color = "white", background = "orange")
 
 ```
 
+
+```{r outliers_table_totals}
+
+
+outliers %>%
+  group_by(scheduler) %>%
+  summarise(n_total = sum(n)) %>%
+  kable() %>%
+  kable_styling("striped")
+
+```
 
 ```{r outliers_plot}
 ggplot(outliers %>% filter(device_name %in% as.vector(devices))) +
@@ -414,13 +428,6 @@ ggplot(outliers %>% filter(device_name %in% as.vector(devices))) +
   labs(title = "Absolute number of outliers per device")
 
 ```
-
-
-**Observations**:
-
-- Advanced scheduler beats the basic one in terms of number of outliers. `Honor 9` shows a remarkly difference. 
-
-- Majority of outliers are positive (beyond top whisker).
 
 
 
@@ -783,11 +790,11 @@ outliers_neg_MO_bubblechart
 
 #### Advanced scheduler vs basic scheduler
 
-```{r}
+```{r outliers_by_schedulers}
 #TODO: agrupar datos por scheduler, y mostrar bubble plot. 
 sel_scheduler <- schedulers[[1]]
 n_outliers_AD <- nrow(filter(data, outlier==1, scheduler ==sel_scheduler))
-n_outliers_pos_MO <- nrow(filter(data, outlier_pos==1, scheduler ==sel_scheduler))
+n_outliers_pos_AD <- nrow(filter(data, outlier_pos==1, scheduler ==sel_scheduler))
 n_outliers_neg_AD <- nrow(filter(data, outlier_neg==1, scheduler ==sel_scheduler))
 
 outliers_scheduler <- 
@@ -800,7 +807,7 @@ outliers_scheduler <-
 ```
 
 
-```{r fig.height=14, fig.width=18}
+```{r outliers_by_schedulers_plot, fig.height=14, fig.width=18}
 title <- paste0("Count of (ALL) outliers grouped by hour (N=", n_outliers, ")")
 
 outliers_scheduler %>%
@@ -821,7 +828,77 @@ outliers_scheduler %>%
 ```
  
 
-### Does the battery level influence timely alarm execution? (Distribution of `delay` over `battery` - without outliers)
+#### Centrality statistics of  outliers
+
+```{r}
+data %>%
+  filter(outlier==1) %>%
+  group_by(scheduler, device_name) %>%
+  summarise(mean = mean(delay),
+            median = median(delay)) %>%
+  arrange(scheduler, device_name) %>%
+  kable() %>%
+  kable_styling("striped")
+
+
+```
+
+
+```{r}
+data %>% 
+  filter(outlier==1) %>%
+  group_by(scheduler) %>%
+  summarise(mean = mean(delay),
+            median = median(delay)) %>%
+  arrange(scheduler) %>%
+  kable() %>%
+  kable_styling("striped")
+
+```
+
+
+#### Concluding remarks (Q1)
+
+In response to the question _Which one of the two schedulers is more reliable?_, we observe the following statements based on the metric `delay`.
+
+Feasibility on the execution of schedulers:
+
+- Basic scheduler stopped running in 2 (out of 5) devices. 
+
+- Advanced scheduler completed the experiments on all devices (Note: to clarify issue with Honor 9)
+
+
+Number of outliers:
+
+- The number of outliers in the experiments with the basic scheduler is more than double that of the experiments with the advanced scheduler. Therefore,the advanced scheduler beats the basic one in terms of number of outliers. 
+
+- `Honor 9` shows a remarkly difference between the two schedulers. This is importnat because this device was used regularly while runing the experiments, demonstrted by the distinct distribution of outliers atnigthtime againts daytime. 
+
+- Majority of outliers are positive (beyond top whisker). Negative values should be interpreted as wrong values due to planned timestamps mistakenly recorded during data collection.
+
+
+Frequency of outliers:
+
+- It is not observed a temporal pattern regarding the frequency of outliers for devices used exclusively for the experiments. Outliers are generally evenly distributed over time
+
+
+Centrality measurements of outliers:
+
+- Basic scheduler shows delays with greater centrality measurements than advanced scheduler 
+
+
+
+### Q2 (Ongoing in another notebook. Will be integrated shortly here)
+
+
+#### Concluding remarks (Q2)
+
+
+
+
+
+
+### Q3: Does the battery level influence timely alarm execution? (Distribution of `delay` over `battery` - without outliers)
 
 ```{r battery_delay_data, eval=FALSE}
 
@@ -850,10 +927,24 @@ p_battery_delay
 ```
 
 
-### Which one of the analysed schedulers loses fewer alarm executions? 
+
+#### Concluding remarks (Q3)
+
+
+### Q4: Which one of the analysed schedulers loses fewer alarm executions? 
 
 Higher reliability = higher percentage of alarms executed / expected alarms for the experiment time frame
 
+
+
+#### Concluding remarks (Q4)
+
+
+## Summary
+
+
+
+## DISCARD TEXT/CODE BEYOND THIS LINE
 
 ### Boxplots
 
@@ -945,6 +1036,7 @@ subplot(
 
 
 ```
+
 
 
 
