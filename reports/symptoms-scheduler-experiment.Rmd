@@ -13,7 +13,7 @@ output:
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
-This document analyses the self-developed scheduler component in Android-based mobile devices as part of the [SyMptOMS project](http://geotec.uji.es/projects/SyMptOMS/). 
+This document analyses the self-developed scheduler component in Android-based mobile devices as part of the [SyMptOMS project](http://geotec.uji.es/projects/SyMptOMS/). This sofware component tested here is called [NativeScript Task Dispatcher](https://www.npmjs.com/package/nativescript-task-dispatcher), that's a [NativeScript](https://nativescript.org/) plugin aimed to ease mobile app's tasks definition and the execution of task workflows in background, regardless of whether the app is visible to the user or not. [NativeScript Task Dispatcher](https://www.npmjs.com/package/nativescript-task-dispatcher) is publicy available as open source software. 
 
 
 ## Reproduce notebook
