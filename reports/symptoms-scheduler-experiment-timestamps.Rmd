@@ -466,6 +466,25 @@ diff_times %>%
 ```
 
 
+
+
+
+
+
+<!--
+#####################################################
+#####################################################
+ABOVE THIS LINE IS NO LONGER VALID
+#####################################################
+#####################################################
+-->
+
+
+
+
+
+
+
 #### Execution timestamps (`delay2`)
 
 - execution timestamp(n-1) - execution timestamp(n) gives us whether execution times betwewen consecutio tasks has been reliable. `delay2` substracts `r baseline_delay` to the previpus calculation.

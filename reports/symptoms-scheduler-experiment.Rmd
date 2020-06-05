@@ -249,7 +249,7 @@ n_observations <- nrow(data)
 ```
 
 
-```{r stats_summary_table}
+```{r stats_summary_table, warning=FALSE, message=FALSE}
 
 # https://towardsdatascience.com/understanding-boxplots-5e2df7bcbd51
 # Understanding Boxplot. What is a outlier?
@@ -361,11 +361,15 @@ n_irq <- nrow(filter(data, outlier == 0 & whisker == 0))
 - `Xiaomi Mi A1` has stopped triggering alarms on **2020-04-23 00:52:00** when running the basic scheduler. An explanation may be that Huawei/Honor smartphones on Android 9+ have a Launch Records where the OS records how much times an app has been launched by itself, so the OS has the possibility to detect this kind of apps. In these smartphones, Huawei also introduced a new task killer (Power Genius) which kills everything that is not whitelisted by Huawei, and does not give users any configuration options. Therefore, the Power Genius uses the information from the Launch Records to kill the scheduled alarms
 
 
+<!-- 
+FIRST RESEARCH QUESTION  
+--> 
+
 ### Q1: Which one of the analysed schedulers is more reliable? (Distribution of outliers)
 
-In mental health interventions, to have a predictable execution of planned actions is mostly preferred which means that notifications and/or alerts are delivered to patients at the right moment. It is inconceivable, for example, that a patient gets a notification (e.g. action, psyco content, etc.) 1 minute later than the event (e..g passing nearby a gambling  hall) that triggered it; the patient could be dozens of meters away from the place of interest or, even worse, walked into that "no-desirable" place. Therefore, closing the "temporal" gap between the triggered event and the action is critical (time matters), especially because time and space/place must be in synchrony in mental health EMIs. If these two dimensions are not in synchrony, the intervetion becomes far less effective.
+In mental health interventions, especially in EMI, the predictibility of the execution of planned actions is mostly preferred since it means notifications and/or alerts are delivered to patients at the right moment. It is inconceivable, for example, that a patient gets a notification (e.g. action, alert, psyco content, etc.) 2 minutes later than the event (e.g. passing nearby a gambling  hall) that triggered the action; the patient could be dozens of meters away from the place of interest or, even worse, walked into that _no-desirable_ place. Therefore, closing both the _temporal_ and _spatial_ gaps between the triggered event and the response to the event is critical in mental health EMIs to ensure that time and space/place are in synchrony with respect to the action. If action-time-place(space) are not in synchrony, the intervetion becomes far less effective. Predictibiliy is then a necessary (but not sufficient) proxy for effectiveness.
 
-Given that average response time (delay) is similar in all devices (< 1 second), outliers are a good candidate to study reliability. In other words, if a scheduler leads to fewer outliers (in terms of delay) would mean that planned actions are more stable and predictable over time/space and, consequently, that scheduler does a good job. On the other hand, a high number of and/or frequent outliers would signal lack of synchrony between space/place and time dimensions in an intervention, resulting in a less suitable scheduler for EMI/A.
+Given that average response time (`delay`) is similar in all devices (< 1 second), outliers are a good candidate to study reliability/predictibility. In other words, if a scheduler shows fewer outliers (in terms of delay), it would mean that planned actions are more stable and predictable over time/space and, consequently, that scheduler does a good job in term of effectiveness. On the other hand, a high number of and/or frequent outliers would signal lack of synchrony between space/place and time dimensions in an intervention, resulting in a less predictable scheduler for EMI/A.
 
 ```{r outliers_table}
 outliers <- 
@@ -487,9 +491,9 @@ outliers_neg_BQ <-
 
 - Number of outliers: `r n_outliers_BQ`
 
-- Number of outliers (top range): `r n_outliers_pos_BQ` - `r round((n_outliers_pos_BQ / n_outliers_BQ)*100, 1)`% (`r scales::comma(n_outliers_pos_BQ, big.mark = ".")`/`r scales::comma(n_outliers_BQ, big.mark = ".")`).
+- Number of outliers (top range, beyond top whisker): `r n_outliers_pos_BQ` - `r round((n_outliers_pos_BQ / n_outliers_BQ)*100, 1)`% (`r scales::comma(n_outliers_pos_BQ, big.mark = ".")`/`r scales::comma(n_outliers_BQ, big.mark = ".")`).
 
-- Number of outliers (bottom range): `r n_outliers_neg_BQ` - `r round((n_outliers_neg_BQ / n_outliers_BQ)*100, 1)`% (`r scales::comma(n_outliers_neg_BQ, big.mark = ".")`/`r scales::comma(n_outliers_BQ, big.mark = ".")`).
+- Number of outliers (bottom range, beyond bottom whisker): `r n_outliers_neg_BQ` - `r round((n_outliers_neg_BQ / n_outliers_BQ)*100, 1)`% (`r scales::comma(n_outliers_neg_BQ, big.mark = ".")`/`r scales::comma(n_outliers_BQ, big.mark = ".")`).
 
 
 ```{r outliers_BQ_plot, fig.height=8, fig.width=18}
@@ -501,7 +505,7 @@ outliers_BQ_bubblechart
 
 
 ```{r  outliers_pos_BQ_plot, fig.height=8, fig.width=18}
-title <- paste0(sel_device, " - Count of outliers (POS) grouped by hour (N=", n_outliers_pos_BQ, ")")
+title <- paste0(sel_device, " - Count of outliers (TOP range) grouped by hour (N=", n_outliers_pos_BQ, ")")
 outliers_pos_BQ_bubblechart <- bubblechart_all_outliers(outliers_pos_BQ, title)
 
 outliers_pos_BQ_bubblechart
@@ -511,7 +515,7 @@ outliers_pos_BQ_bubblechart
 
 ```{r  outliers_neg_BQ_plot, fig.height=8, fig.width=18}
 
-title <- paste0(sel_device, " - Count of outliers (NEG) grouped by hour (N=", n_outliers_neg_BQ, ")")
+title <- paste0(sel_device, " - Count of outliers (BOTTOM range) grouped by hour (N=", n_outliers_neg_BQ, ")")
 outliers_neg_BQ_bubblechart <- bubblechart_all_outliers(outliers_neg_BQ, title)
  
 outliers_neg_BQ_bubblechart
@@ -558,9 +562,9 @@ outliers_neg_NV <-
 
 - Number of outliers: `r n_outliers_NV`
 
-- Number of outliers (top range): `r n_outliers_pos_NV` - `r round((n_outliers_pos_NV / n_outliers_NV)*100, 1)`% (`r scales::comma(n_outliers_pos_NV, big.mark = ".")`/`r scales::comma(n_outliers_NV, big.mark = ".")`).
+- Number of outliers (top range, beyond top whisker): `r n_outliers_pos_NV` - `r round((n_outliers_pos_NV / n_outliers_NV)*100, 1)`% (`r scales::comma(n_outliers_pos_NV, big.mark = ".")`/`r scales::comma(n_outliers_NV, big.mark = ".")`).
 
-- Number of outliers (bottom range): `r n_outliers_neg_NV` - `r round((n_outliers_neg_NV / n_outliers_NV)*100, 1)`% (`r scales::comma(n_outliers_neg_NV, big.mark = ".")`/`r scales::comma(n_outliers_NV, big.mark = ".")`).
+- Number of outliers (bottom range, beyond bottom whisker): `r n_outliers_neg_NV` - `r round((n_outliers_neg_NV / n_outliers_NV)*100, 1)`% (`r scales::comma(n_outliers_neg_NV, big.mark = ".")`/`r scales::comma(n_outliers_NV, big.mark = ".")`).
 
 
 ```{r outliers_NV_plot, fig.height=8, fig.width=18}
@@ -571,7 +575,7 @@ outliers_NV_bubblechart
 ```
 
 ```{r  outliers_pos_NV_plot, fig.height=8, fig.width=18}
-title <- paste0(sel_device, " - Count of (POS) outliers grouped by hour (N=", n_outliers_pos_NV, ")")
+title <- paste0(sel_device, " - Count of (TOP range) outliers grouped by hour (N=", n_outliers_pos_NV, ")")
 outliers_pos_NV_bubblechart <- bubblechart_all_outliers(outliers_pos_NV, title)
 outliers_pos_NV_bubblechart
 
@@ -579,7 +583,7 @@ outliers_pos_NV_bubblechart
 
 
 ```{r  outliers_neg_NV_plot, fig.height=8, fig.width=18}
-title <- paste0(sel_device, " - Count of (NEG) outliers grouped by hour (N=", n_outliers_neg_NV, ")")
+title <- paste0(sel_device, " - Count of (BOTTOM range) outliers grouped by hour (N=", n_outliers_neg_NV, ")")
 outliers_neg_NV_bubblechart <- bubblechart_all_outliers(outliers_neg_NV, title)
 outliers_neg_NV_bubblechart
 
@@ -625,9 +629,9 @@ outliers_neg_A1 <-
 
 - Number of outliers: `r n_outliers_A1`
 
-- Number of outliers (top range): `r n_outliers_pos_A1` - `r round((n_outliers_pos_A1 / n_outliers_A1)*100, 1)`% (`r scales::comma(n_outliers_pos_A1, big.mark = ".")`/`r scales::comma(n_outliers_A1, big.mark = ".")`).
+- Number of outliers (top range, beyond top whisker): `r n_outliers_pos_A1` - `r round((n_outliers_pos_A1 / n_outliers_A1)*100, 1)`% (`r scales::comma(n_outliers_pos_A1, big.mark = ".")`/`r scales::comma(n_outliers_A1, big.mark = ".")`).
 
-- Number of outliers (bottom range): `r n_outliers_neg_A1` - `r round((n_outliers_neg_A1 / n_outliers_A1)*100, 1)`% (`r scales::comma(n_outliers_neg_A1, big.mark = ".")`/`r scales::comma(n_outliers_A1, big.mark = ".")`).
+- Number of outliers (bottom range, beyond bottom whisker): `r n_outliers_neg_A1` - `r round((n_outliers_neg_A1 / n_outliers_A1)*100, 1)`% (`r scales::comma(n_outliers_neg_A1, big.mark = ".")`/`r scales::comma(n_outliers_A1, big.mark = ".")`).
 
 
 ```{r outliers_A1_plot, fig.height=8, fig.width=18}
@@ -638,7 +642,7 @@ outliers_A1_bubblechart
 ```
 
 ```{r  outliers_pos_A1_plot, fig.height=8, fig.width=18}
-title <- paste0(sel_device, " - Count of (POS) outliers grouped by hour (N=", n_outliers_pos_A1, ")")
+title <- paste0(sel_device, " - Count of (TOP range) outliers grouped by hour (N=", n_outliers_pos_A1, ")")
 outliers_pos_A1_bubblechart <- bubblechart_all_outliers(outliers_pos_A1, title)
 outliers_pos_A1_bubblechart
 
@@ -646,7 +650,7 @@ outliers_pos_A1_bubblechart
 
 
 ```{r  outliers_neg_A1_plot, fig.height=8, fig.width=18}
-title <- paste0(sel_device, " - Count of (NEG) outliers grouped by hour (N=", n_outliers_neg_A1, ")")
+title <- paste0(sel_device, " - Count of (BOTTOM range) outliers grouped by hour (N=", n_outliers_neg_A1, ")")
 outliers_neg_A1_bubblechart <- bubblechart_all_outliers(outliers_neg_A1, title)
 outliers_neg_A1_bubblechart
 
@@ -689,9 +693,9 @@ outliers_neg_H9 <-
 
 - Number of outliers: `r n_outliers_H9`
 
-- Number of outliers (top range): `r n_outliers_pos_H9` - `r round((n_outliers_pos_H9 / n_outliers_H9)*100, 1)`% (`r scales::comma(n_outliers_pos_H9, big.mark = ".")`/`r scales::comma(n_outliers_H9, big.mark = ".")`).
+- Number of outliers (top range, beyond top whisker): `r n_outliers_pos_H9` - `r round((n_outliers_pos_H9 / n_outliers_H9)*100, 1)`% (`r scales::comma(n_outliers_pos_H9, big.mark = ".")`/`r scales::comma(n_outliers_H9, big.mark = ".")`).
 
-- Number of outliers (bottom range): `r n_outliers_neg_H9` - `r round((n_outliers_neg_H9 / n_outliers_H9)*100, 1)`% (`r scales::comma(n_outliers_neg_H9, big.mark = ".")`/`r scales::comma(n_outliers_H9, big.mark = ".")`).
+- Number of outliers (bottom range, beyond bottom whisker): `r n_outliers_neg_H9` - `r round((n_outliers_neg_H9 / n_outliers_H9)*100, 1)`% (`r scales::comma(n_outliers_neg_H9, big.mark = ".")`/`r scales::comma(n_outliers_H9, big.mark = ".")`).
 
 
 ```{r outliers_H9_plot, fig.height=8, fig.width=18}
@@ -703,7 +707,7 @@ outliers_H9_bubblechart
 
 
 ```{r  outliers_pos_H9_plot, fig.height=8, fig.width=18}
-title <- paste0(sel_device, " - Count of (POS) outliers grouped by hour (N=", n_outliers_pos_H9, ")")
+title <- paste0(sel_device, " - Count of (TOP range) outliers grouped by hour (N=", n_outliers_pos_H9, ")")
 outliers_pos_H9_bubblechart <- bubblechart_all_outliers(outliers_pos_H9, title)
 outliers_pos_H9_bubblechart
 
@@ -713,7 +717,7 @@ outliers_pos_H9_bubblechart
 
 
 ```{r  outliers_neg_H9_plot, fig.height=8, fig.width=18}
-title <- paste0(sel_device, " - Count of (NEG) outliers grouped by hour (N=", n_outliers_neg_H9, ")")
+title <- paste0(sel_device, " - Count of (BOTTOM range) outliers grouped by hour (N=", n_outliers_neg_H9, ")")
 outliers_neg_H9_bubblechart <- bubblechart_all_outliers(outliers_neg_H9, title)
 outliers_neg_H9_bubblechart
 
@@ -758,9 +762,9 @@ outliers_neg_MO <-
 
 - Number of outliers: `r n_outliers_MO`
 
-- Number of outliers (top range): `r n_outliers_pos_MO` - `r round((n_outliers_pos_MO / n_outliers_MO)*100, 1)`% (`r scales::comma(n_outliers_pos_MO, big.mark = ".")`/`r scales::comma(n_outliers_MO, big.mark = ".")`).
+- Number of outliers (top range, beyond top whisker): `r n_outliers_pos_MO` - `r round((n_outliers_pos_MO / n_outliers_MO)*100, 1)`% (`r scales::comma(n_outliers_pos_MO, big.mark = ".")`/`r scales::comma(n_outliers_MO, big.mark = ".")`).
 
-- Number of outliers (bottom range): `r n_outliers_neg_MO` - `r round((n_outliers_neg_MO / n_outliers_MO)*100, 1)`% (`r scales::comma(n_outliers_neg_MO, big.mark = ".")`/`r scales::comma(n_outliers_MO, big.mark = ".")`).
+- Number of outliers (bottom range, beyond bottom whisker): `r n_outliers_neg_MO` - `r round((n_outliers_neg_MO / n_outliers_MO)*100, 1)`% (`r scales::comma(n_outliers_neg_MO, big.mark = ".")`/`r scales::comma(n_outliers_MO, big.mark = ".")`).
 
 
 ```{r outliers_MO_plot, fig.height=8, fig.width=18}
@@ -771,7 +775,7 @@ outliers_MO_bubblechart
 
 
 ```{r  outliers_pos_MO_plot, fig.height=8, fig.width=18}
-title <- paste0(sel_device, " - Count of (POS) outliers grouped by hour (N=", n_outliers_pos_MO, ")")
+title <- paste0(sel_device, " - Count of (TOP range) outliers grouped by hour (N=", n_outliers_pos_MO, ")")
 outliers_pos_MO_bubblechart <- bubblechart_all_outliers(outliers_pos_MO, title)
 outliers_pos_MO_bubblechart
 
@@ -780,7 +784,7 @@ outliers_pos_MO_bubblechart
 
 
 ```{r  outliers_neg_MO_plot, fig.height=8, fig.width=18}
-title <- paste0(sel_device, " - Count of (NEG) outliers grouped by hour (N=", n_outliers_neg_MO, ")")
+title <- paste0(sel_device, " - Count of (BOTTOM range) outliers grouped by hour (N=", n_outliers_neg_MO, ")")
 outliers_neg_MO_bubblechart <- bubblechart_all_outliers(outliers_neg_MO, title)
 outliers_neg_MO_bubblechart
 
@@ -830,7 +834,7 @@ outliers_scheduler %>%
 
 #### Centrality statistics of  outliers
 
-```{r}
+```{r outlier_centrality}
 data %>%
   filter(outlier==1) %>%
   group_by(scheduler, device_name) %>%
@@ -844,7 +848,7 @@ data %>%
 ```
 
 
-```{r}
+```{r outlier_centrality_scheduler}
 data %>% 
   filter(outlier==1) %>%
   group_by(scheduler) %>%
@@ -872,23 +876,265 @@ Number of outliers:
 
 - The number of outliers in the experiments with the basic scheduler is more than double that of the experiments with the advanced scheduler. Therefore,the advanced scheduler beats the basic one in terms of number of outliers. 
 
-- `Honor 9` shows a remarkly difference between the two schedulers. This is importnat because this device was used regularly while runing the experiments, demonstrted by the distinct distribution of outliers atnigthtime againts daytime. 
+- `Honor 9` shows a remarkly difference between the two schedulers. This is importnat because this device was used regularly while runing the experiments, demonstrated by the distinct distribution of outliers at nigthtime and daytime. 
 
-- Majority of outliers are positive (beyond top whisker). Negative values should be interpreted as wrong values due to planned timestamps mistakenly recorded during data collection.
+- Majority of outliers are positive (beyond top whisker). Negative values (beyond bottom whisker) should be interpreted as wrong values due to planned timestamps mistakenly recorded during data collection.
 
 
 Frequency of outliers:
 
-- It is not observed a temporal pattern regarding the frequency of outliers for devices used exclusively for the experiments. Outliers are generally evenly distributed over time
+- It is not observed a temporal pattern regarding the frequency of outliers for devices used exclusively for the experiments. Outliers are generally evenly distributed over time.
 
 
 Centrality measurements of outliers:
 
-- Basic scheduler shows delays with greater centrality measurements than advanced scheduler 
+- Basic scheduler shows delays with greater centrality measurements than advanced scheduler. 
 
 
 
-### Q2 (Ongoing in another notebook. Will be integrated shortly here)
+<!-- 
+################################################################
+################################################################
+SECOND RESEARCH QUESTION  
+################################################################
+################################################################
+--> 
+
+### Q2: Which one of the analysed schedulers is more accurate? (Distribution of `delay`)
+
+
+```{r dual_scale_plots_function}
+source(here::here("R", "dual_scale_plot.R"))
+```
+
+We assume that higher accuracy equals to lower `delay`. In Q1, we compete `delay`as `execution timestamp(i) - planned timestamp(i)`, being `i` each time steps (roughly 1 minute). Here, we compute other types of delays to make sure that the scheduler works as expected. Therefore, wecompute the following timestamps differences: 
+
+- Consecutive planning timestamps, `planned timestamp(i-1) - planned timestamp(i)`, in order to detect wrong planned timestamp values 
+
+- Consecutive execution timestamps, `execution timestamp(i-1) - execution timestamp(i)`, to detect execution timestamps between consecutive measurements
+
+- Overhead, `execution timestamp(i) - planning timestamp(i+1)`, to explore framework overhead between consecutive measurements 
+
+
+#### Consecutive planning timestamps 
+
+We calculate `planned timestamp(i-1) - planned timestamp(i)` to detect wrong planning timestamp values. During data collection, chances are that some planned timestamps are not correctly registered, creating duplicated timestamps, suggested by the presence of negative values of `delay`. The new variable/metric is called `plan_date_diff`. 
+
+
+```{r plan_date_diff}
+diff_times <- 
+  data %>%
+  select(step, scheduler, device_id, device_name, delay, plan_date, exec_date, plan_day, exec_day)
+
+diff_times <- 
+  diff_times %>%
+  group_by(scheduler, device_id) %>%
+  arrange(plan_date) %>%
+  mutate(plan_date_lagged = lag(plan_date),
+         plan_date_diff = as.numeric(as.duration(interval(plan_date_lagged, plan_date)) / dseconds(1)),
+         plan_date_diff = ifelse(is.na(plan_date_diff), 0, round(plan_date_diff, 3)),
+         plan_date_diff_cum = cumsum(plan_date_diff))
+         
+```
+
+
+
+```{r plan_date_diff_summary, warning=FALSE, message=FALSE}
+
+# https://towardsdatascience.com/understanding-boxplots-5e2df7bcbd51
+# Understanding Boxplot. What is a outlier?
+# Min., 1st Qu., Median, Mean, 3rd Qu., Max.
+
+col_names <- c("scheduler", "device_name", "min", "quartile1", "median", "quartile3", "max", "mean", "bottom_whisker", "top_whisker")
+summaries_diff <- data.frame(matrix(ncol=length(col_names), nrow = 0))
+colnames(summaries_diff) <- col_names
+
+for (s in 1:length(schedulers)) {
+  for (d in 1:length(devices)) {
+    
+    diff_times %>%
+      filter(scheduler == schedulers[[s]]) %>%
+      filter(device_name == devices[[d]]) %>%
+      select(device_id, device_name, plan_date_diff) -> one
+    
+    summary_row <- data.frame(matrix(ncol=length(col_names), nrow = 0))
+    colnames(summary_row) <- col_names
+    
+    mean <- mean(one$plan_date_diff, na.rm = TRUE)
+    summary_boxplot <- boxplot(one$plan_date_diff, plot = FALSE) 
+    bottom_whisker <- summary_boxplot$stats[1,1]
+    top_whisker <-  summary_boxplot$stats[5,1]
+    
+    summary_row[1,] <- c(schedulers[[s]], devices[[d]], fivenum(one$plan_date_diff), mean, bottom_whisker, top_whisker)
+
+    summaries_diff <- rbind(summaries_diff, summary_row)
+  }
+}
+
+summaries_diff <- 
+  summaries_diff %>%
+  mutate_at(vars(c("scheduler", "device_name")), ~as.character(.)) %>% 
+  mutate_at(vars(-c("scheduler", "device_name")), ~as.numeric(.)) %>%
+  mutate_if(is.numeric, ~round(., 3))
+
+data %>%
+  group_by(exp_id, scheduler, device_name) %>%
+  summarise(n = n(),
+            start_datetime = min(plan_date),
+            end_datetime = max(plan_date)) %>%
+  inner_join(summaries_diff, by=c("scheduler", "device_name")) %>%
+  arrange(exp_id, scheduler, device_name) -> summaries_diff_table
+
+kable(summaries_diff_table %>%
+        select(`# exp` = exp_id,
+               `Type scheduler` = scheduler,
+               `Device` = device_name,
+               `# records` = n,
+               `Start` = start_datetime,
+               `End` = end_datetime,
+               `Min` = min,
+               `Bottom whisker`= bottom_whisker,
+               `1st Qu.` = quartile1,
+               `Median` = median,
+               `Mean` = mean,
+               `3rd Qu.` = quartile3,
+               `Top whisker`= top_whisker,
+               `Max` = max),
+      format = "html",
+      booktabs = TRUE,
+      caption = "Table. Descriptive statistics of `plan_date_diff` (planned timestamp(i-1) - planned timestamp(i)) per scheduler/device.") %>%
+  kable_styling(full_width = TRUE, bootstrap_options = c("striped", "bordered", "condensed")) %>%
+  collapse_rows(columns = 1:2, valign = "top")
+
+```
+
+
+
+
+
+```{r plan_date_diff_outliers}
+diff_times <-
+  diff_times %>%
+  left_join(summaries_diff, by=c("scheduler", "device_name")) %>%
+  mutate(plan_date_diff_outlier_pos = ifelse(plan_date_diff > top_whisker, 1, 0)) %>%
+  mutate(plan_date_diff_outlier_neg = ifelse(plan_date_diff < bottom_whisker, 1, 0)) %>%
+  mutate(plan_date_diff_outlier = ifelse((plan_date_diff_outlier_pos == 1 | plan_date_diff_outlier_neg == 1), 1, 0)) %>%
+  arrange(device_name, step)
+```
+
+
+```{r plan_date_diff_outliers_table}
+plan_date_outliers <- 
+  filter(diff_times, plan_date_diff_outlier==1) %>%
+  group_by(scheduler, device_name) %>%
+  summarise(n = n()) %>%
+  arrange(device_name, scheduler)
+
+plan_date_outliers_pos <- 
+  filter(diff_times, plan_date_diff_outlier_pos==1) %>%
+  group_by(scheduler, device_name) %>%
+  summarise(n_pos = n()) %>%
+  arrange(device_name, scheduler)
+
+plan_date_outliers_neg <- 
+  filter(diff_times, plan_date_diff_outlier_neg==1) %>%
+  group_by(scheduler, device_name) %>%
+  summarise(n_neg = n()) %>%
+  arrange(device_name, scheduler)
+
+plan_date_outliers <- 
+  plan_date_outliers %>% 
+  left_join(plan_date_outliers_pos, by = c("scheduler", "device_name")) %>%
+  left_join(plan_date_outliers_neg, by = c("scheduler", "device_name"))
+  
+
+kable(plan_date_outliers %>%
+        select(`Device` = device_name, 
+               `Type scheduler` = scheduler,
+               `# outliers` = n, 
+               `# outliers positive` = n_pos,
+               `# outliers negative` = n_neg),
+      format = "html",
+      booktabs = TRUE,
+      caption = "Table. Outliers of `plan_date_diff` per scheduler/device.") %>%
+  kable_styling(full_width =TRUE, position = "left", bootstrap_options = c("striped", "bordered", "condensed"))
+
+```
+
+
+
+```{r plan_date_diff_outliers_plot, fig.height=16, fig.width=16}
+
+# Add annotation to each plot with the number of outliers
+# src: https://stackoverflow.com/questions/11889625/annotating-text-on-individual-facet-in-ggplot2
+
+# TODO: cast to data.frame
+annotation_outliers <- 
+  plan_date_outliers %>%
+  select(device_name, scheduler, n) %>%
+  as.data.frame()
+
+diff_times %>%
+  filter(plan_date_diff_outlier ==1, plan_date_diff < 150) %>%  #TODO: What do I do with super-outliers?
+  ggplot(aes(x = step, color=factor(device_name))) +
+    # geom_point(aes(y = delay), alpha = 0.6, size = 0.5) +
+    geom_point(aes(y = plan_date_diff), alpha = 0.3, size = 0.7) +
+    # geom_point(aes(y = exec_date_diff)) +
+    geom_label(data = annotation_outliers, 
+              aes(x = Inf, y = Inf, label = n),
+               hjust   = 1.5, vjust   = 1.5) +
+  
+    labs(title="plan_date_diff without super-outliers (> 150 secs). Anotation denotes total number of outliers per device/scheduler",
+         x = "Steps [~1min]") + 
+    scale_y_continuous(name="plan_date_diff [seconds]") + #, breaks=ybks_delay, limits=ylim_delay) +
+    facet_grid(device_name~scheduler) +
+    guides(color=FALSE) +
+    # theme(legend.title = element_text(size=8), 
+    #       legend.position="bottom",
+    #       legend.direction = "horizontal") +
+    theme_bw()
+
+```
+
+
+```{r plan_date_diff_zero_plot, fig.height=5, fig.width=12}
+
+diff_times %>%
+  filter(plan_date_diff == 0) %>%  
+  ggplot() +
+  geom_bar(aes(x=device_name, fill=scheduler), stat = 'count', position = position_dodge(preserve = 'single')) +
+  theme_bw() +
+  labs(title = "plan_date_diff == 0")
+
+# 
+# diff_times %>%
+#   filter(plan_date_diff == 0) %>%
+#   filter(device_id == names(devices)[4] | device_id == names(devices)[3]) %>%
+#   ggplot(aes(x = plan_date, color=factor(device_name))) +
+#     # geom_point(aes(y = delay), alpha = 0.6, size = 0.5) +
+#     geom_point(aes(y = plan_date_diff), alpha = 0.3, size = 1) +
+#     # geom_point(aes(y = exec_date_diff)) +
+#   
+#     labs(title="plan_date_diff == 0",
+#          x = "Steps [~1min]") + 
+#     scale_y_continuous(name="diff [seconds]") + #, breaks=ybks_delay, limits=ylim_delay) +
+#     facet_grid(~device_name) +
+#     theme(legend.title = element_text(size=8), 
+#           legend.position="bottom",
+#           legend.direction = "horizontal") +
+#     theme_bw()
+
+
+```
+
+
+#### Consecutive execution timestamps 
+
+We calculate `execution timestamp(i-1) - execution timestamp(i)` which gives us whether execution times between consecutive measurements (i.e. tasks execution) are accurate, i.e., tasks are executed as expected. The new variable/metric is called `delay2` (substracting `r baseline_delay` to get values around zero).
+
+
+#### Overhead between consecutive measurements 
+
 
 
 #### Concluding remarks (Q2)
