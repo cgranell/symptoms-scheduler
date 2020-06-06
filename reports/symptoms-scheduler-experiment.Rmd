@@ -1,5 +1,5 @@
 ---
-title: "Symptoms - scheduler experiment"
+title: "Symptoms - 'NativeScript Task Dispatcher' experiment"
 author: "Carlos Granell, [SyMptOMS team](http://geotec.uji.es/projects/SyMptOMS/), [GEOTEC research group](http://geotec.uji.es/) "
 date: "17/4/2020 (updated `r format(Sys.time(), '%d %B, %Y')`)"
 output: 
@@ -34,7 +34,7 @@ You can run the script `install.R` to install all required dependencies on a new
 source("R/install.R")
 ```
 
-The plots and tables use the packages [`ggplot2`](http://ggplot2.tidyverse.org/), [`knitr::kable()`](https://yihui.name/knitr/) and [`kableExtra`](https://cran.r-project.org/package=kableExtra).
+The plots and tables use the packages [`ggplot2`](http://ggplot2.tidyverse.org/), [`knitr::kable()`](https://yihui.name/knitr/), [`kableExtra`](https://cran.r-project.org/package=kableExtra) and [`timetk`](https://business-science.github.io/timetk/index.html).
 
 Required libraries and runtime environment description are as follows.
 
@@ -50,13 +50,14 @@ library(scales)
 library(grid)
 library(gridBase)
 library(gridExtra)
-library(egg)
+# library(egg)
+library(timetk)
 ```
 
 
 ```{r set_seed}
 # just in case
-set.seed(nchar("Symptoms - scheduler experiment"))
+set.seed(nchar("Symptoms - 'NativeScript Task Dispatcher' experiment"))
 ```
 
 ## Data download
@@ -361,6 +362,44 @@ n_irq <- nrow(filter(data, outlier == 0 & whisker == 0))
 - `Xiaomi Mi A1` has stopped triggering alarms on **2020-04-23 00:52:00** when running the basic scheduler. An explanation may be that Huawei/Honor smartphones on Android 9+ have a Launch Records where the OS records how much times an app has been launched by itself, so the OS has the possibility to detect this kind of apps. In these smartphones, Huawei also introduced a new task killer (Power Genius) which kills everything that is not whitelisted by Huawei, and does not give users any configuration options. Therefore, the Power Genius uses the information from the Launch Records to kill the scheduled alarms
 
 
+
+
+### Time series visualisation
+
+Plots below show `delay` _vs_ `plan_date`.
+
+```{r ts_advanced_scheduler, fig.height=16, fig.width=12}
+
+interactive <- TRUE
+
+data %>%
+  filter(scheduler==schedulers[[1]]) %>%
+  group_by(device_name) %>%
+  select(device_name, plan_date, delay) %>%
+  plot_time_series(plan_date, delay,
+                   .facet_ncol = 1, .facet_scales = "free",
+                   .interactive = interactive,
+                   .title = schedulers[[1]],
+                   .y_lab = "Delay [seconds]",
+                   .plotly_slider = TRUE)
+```
+
+
+
+```{r ts_basic_scheduler, fig.height=16, fig.width=12}
+
+data %>%
+  filter(scheduler==schedulers[[2]]) %>%
+  group_by(device_name) %>%
+  select(device_name, plan_date, delay) %>%
+  plot_time_series(plan_date, delay,
+                   .facet_ncol = 1, .facet_scales = "free",
+                   .interactive = interactive,
+                   .title = schedulers[[1]],
+                    .y_lab = "Delay [seconds]",
+                   .plotly_slider = TRUE)
+```
+
 <!-- 
 FIRST RESEARCH QUESTION  
 --> 
@@ -432,6 +471,9 @@ ggplot(outliers %>% filter(device_name %in% as.vector(devices))) +
   labs(title = "Absolute number of outliers per device")
 
 ```
+
+
+
 
 
 
@@ -1068,7 +1110,6 @@ kable(plan_date_outliers %>%
 # Add annotation to each plot with the number of outliers
 # src: https://stackoverflow.com/questions/11889625/annotating-text-on-individual-facet-in-ggplot2
 
-# TODO: cast to data.frame
 annotation_outliers <- 
   plan_date_outliers %>%
   select(device_name, scheduler, n) %>%
