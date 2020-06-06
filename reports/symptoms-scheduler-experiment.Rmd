@@ -364,40 +364,299 @@ n_irq <- nrow(filter(data, outlier == 0 & whisker == 0))
 
 
 
-### Time series visualisation
+### Time series visualisation (Distribution of `delay`)
 
-Plots below show `delay` _vs_ `plan_date`.
+```{r ts_defs}
+# Setup for the plotly charts (# FALSE returns ggplots)
+interactive <- TRUE 
+```
 
-```{r ts_advanced_scheduler, fig.height=16, fig.width=12}
+#### BQ Aquaris V
 
-interactive <- TRUE
+```{r ts_delay_BQ_AD, fig.height=8, fig.width=12, warning=FALSE, message=FALSE}
 
 data %>%
-  filter(scheduler==schedulers[[1]]) %>%
-  group_by(device_name) %>%
-  select(device_name, plan_date, delay) %>%
+  filter(scheduler==schedulers[[1]], device_name==devices[[1]]) %>%
+  select(scheduler, device_name, plan_date, delay) %>%
   plot_time_series(plan_date, delay,
-                   .facet_ncol = 1, .facet_scales = "free",
+                   # .facet_ncol = 1, .facet_scales = "free",
+                   .color_var = week(plan_date),
                    .interactive = interactive,
-                   .title = schedulers[[1]],
+                   .title = paste("[Delay]", schedulers[[1]], "-", devices[[1]]),
                    .y_lab = "Delay [seconds]",
+                   .color_lab = "Week", 
                    .plotly_slider = TRUE)
+
 ```
 
 
 
-```{r ts_basic_scheduler, fig.height=16, fig.width=12}
+```{r ts_delay_BQ_BA, fig.height=8, fig.width=12, warning=FALSE, message=FALSE}
 
 data %>%
-  filter(scheduler==schedulers[[2]]) %>%
-  group_by(device_name) %>%
-  select(device_name, plan_date, delay) %>%
+  filter(scheduler==schedulers[[2]], device_name==devices[[1]]) %>%
+  select(scheduler, device_name, plan_date, delay) %>%
   plot_time_series(plan_date, delay,
-                   .facet_ncol = 1, .facet_scales = "free",
+                   # .facet_ncol = 1, .facet_scales = "free",
+                   .color_var = week(plan_date),
                    .interactive = interactive,
-                   .title = schedulers[[1]],
-                    .y_lab = "Delay [seconds]",
+                   .title = paste("[Delay]", schedulers[[2]], "-", devices[[1]]),
+                   .y_lab = "Delay [seconds]",
+                   .color_lab = "Week", 
                    .plotly_slider = TRUE)
+
+
+```
+
+
+```{r ts_delay_BQ_seasonality, fig.height=16, fig.width=12}
+
+data %>%
+  filter(device_name==devices[[1]]) %>%
+  group_by(scheduler) %>%
+  select(scheduler, device_name, plan_date, delay) %>%
+    plot_seasonal_diagnostics(plan_date, delay, 
+                              .title = paste("[Seasonal Diagnostics]", devices[[1]]),
+                              .interactive = interactive)
+
+```
+
+
+#### Nvidia Shield Tablet
+
+
+```{r ts_delay_NV_AD, fig.height=8, fig.width=12, warning=FALSE, message=FALSE}
+
+data %>%
+  filter(scheduler==schedulers[[1]], device_name==devices[[2]]) %>%
+  select(scheduler, device_name, plan_date, delay) %>%
+  plot_time_series(plan_date, delay,
+                   # .facet_ncol = 1, .facet_scales = "free",
+                   .color_var = week(plan_date),
+                   .interactive = interactive,
+                   .title = paste("[Delay]", schedulers[[1]], "-", devices[[2]]),
+                   .y_lab = "Delay [seconds]",
+                   .color_lab = "Week", 
+                   .plotly_slider = TRUE)
+
+```
+
+
+
+```{r ts_delay_NV_BA, fig.height=8, fig.width=12, warning=FALSE, message=FALSE}
+
+data %>%
+  filter(scheduler==schedulers[[2]], device_name==devices[[2]]) %>%
+  select(scheduler, device_name, plan_date, delay) %>%
+  plot_time_series(plan_date, delay,
+                   # .facet_ncol = 1, .facet_scales = "free",
+                   .color_var = week(plan_date),
+                   .interactive = interactive,
+                   .title = paste("[Delay]", schedulers[[2]], "-", devices[[2]]),
+                   .y_lab = "Delay [seconds]",
+                   .color_lab = "Week", 
+                   .plotly_slider = TRUE)
+
+
+```
+
+
+```{r ts_delay_NV_seasonality, fig.height=16, fig.width=12}
+
+data %>%
+  filter(device_name==devices[[2]]) %>%
+  group_by(scheduler) %>%
+  select(scheduler, device_name, plan_date, delay) %>%
+    plot_seasonal_diagnostics(plan_date, delay, 
+                              .title = paste("[Seasonal Diagnostics]", devices[[2]]),
+                              .interactive = interactive)
+
+```
+
+
+
+
+#### Xiaomi Mi A1
+
+
+
+
+```{r ts_delay_A1_AD, fig.height=8, fig.width=12, warning=FALSE, message=FALSE}
+
+data %>%
+  filter(scheduler==schedulers[[1]], device_name==devices[[3]]) %>%
+  select(scheduler, device_name, plan_date, delay) %>%
+  plot_time_series(plan_date, delay,
+                   # .facet_ncol = 1, .facet_scales = "free",
+                   .color_var = week(plan_date),
+                   .interactive = interactive,
+                   .title = paste("[Delay]", schedulers[[1]], "-", devices[[3]]),
+                   .y_lab = "Delay [seconds]",
+                   .color_lab = "Week", 
+                   .plotly_slider = TRUE)
+
+```
+
+
+
+```{r ts_delay_A1_BA, fig.height=8, fig.width=12, warning=FALSE, message=FALSE}
+
+data %>%
+  filter(scheduler==schedulers[[2]], device_name==devices[[3]]) %>%
+  select(scheduler, device_name, plan_date, delay) %>%
+  plot_time_series(plan_date, delay,
+                   # .facet_ncol = 1, .facet_scales = "free",
+                   .color_var = week(plan_date),
+                   .interactive = interactive,
+                   .title = paste("[Delay]", schedulers[[2]], "-", devices[[3]]),
+                   .y_lab = "Delay [seconds]",
+                   .color_lab = "Week", 
+                   .plotly_slider = TRUE)
+
+
+```
+
+
+```{r ts_delay_A1_seasonality, fig.height=16, fig.width=12}
+
+data %>%
+  filter(device_name==devices[[3]]) %>%
+  group_by(scheduler) %>%
+  select(scheduler, device_name, plan_date, delay) %>%
+    plot_seasonal_diagnostics(plan_date, delay, 
+                              .title = paste("[Seasonal Diagnostics]", devices[[3]]),
+                              .interactive = interactive)
+
+```
+
+
+
+
+#### Honor 9
+
+
+
+
+```{r ts_delay_H9_AD, fig.height=8, fig.width=12, warning=FALSE, message=FALSE}
+
+data %>%
+  filter(scheduler==schedulers[[1]], device_name==devices[[4]]) %>%
+  select(scheduler, device_name, plan_date, delay) %>%
+  plot_time_series(plan_date, delay,
+                   # .facet_ncol = 1, .facet_scales = "free",
+                   .color_var = week(plan_date),
+                   .interactive = interactive,
+                   .title = paste("[Delay]", schedulers[[1]], "-", devices[[4]]),
+                   .y_lab = "Delay [seconds]",
+                   .color_lab = "Week", 
+                   .plotly_slider = TRUE)
+
+```
+
+
+
+```{r ts_delay_H9_BA, fig.height=8, fig.width=12, warning=FALSE, message=FALSE}
+
+data %>%
+  filter(scheduler==schedulers[[2]], device_name==devices[[4]]) %>%
+  select(scheduler, device_name, plan_date, delay) %>%
+  plot_time_series(plan_date, delay,
+                   # .facet_ncol = 1, .facet_scales = "free",
+                   .color_var = week(plan_date),
+                   .interactive = interactive,
+                   .title = paste("[Delay]", schedulers[[2]], "-", devices[[4]]),
+                   .y_lab = "Delay [seconds]",
+                   .color_lab = "Week", 
+                   .plotly_slider = TRUE)
+
+
+```
+
+
+```{r ts_delay_H9_seasonality, fig.height=16, fig.width=12}
+
+data %>%
+  filter(device_name==devices[[4]]) %>%
+  group_by(scheduler) %>%
+  select(scheduler, device_name, plan_date, delay) %>%
+    plot_seasonal_diagnostics(plan_date, delay, 
+                              .title = paste("[Seasonal Diagnostics]", devices[[4]]),
+                              .interactive = interactive)
+
+```
+
+
+#### Motorola Moto G
+
+
+
+
+
+
+```{r ts_delay_MO_AD, fig.height=8, fig.width=12, warning=FALSE, message=FALSE}
+
+data %>%
+  filter(scheduler==schedulers[[1]], device_name==devices[[5]]) %>%
+  select(scheduler, device_name, plan_date, delay) %>%
+  plot_time_series(plan_date, delay,
+                   # .facet_ncol = 1, .facet_scales = "free",
+                   .color_var = week(plan_date),
+                   .interactive = interactive,
+                   .title = paste("[Delay]", schedulers[[1]], "-", devices[[5]]),
+                   .y_lab = "Delay [seconds]",
+                   .color_lab = "Week", 
+                   .plotly_slider = TRUE)
+
+```
+
+
+
+```{r ts_delay_MO_BA, fig.height=8, fig.width=12, warning=FALSE, message=FALSE}
+
+data %>%
+  filter(scheduler==schedulers[[2]], device_name==devices[[5]]) %>%
+  select(scheduler, device_name, plan_date, delay) %>%
+  plot_time_series(plan_date, delay,
+                   # .facet_ncol = 1, .facet_scales = "free",
+                   .color_var = week(plan_date),
+                   .interactive = interactive,
+                   .title = paste("[Delay]", schedulers[[2]], "-", devices[[5]]),
+                   .y_lab = "Delay [seconds]",
+                   .color_lab = "Week", 
+                   .plotly_slider = TRUE)
+
+
+```
+
+
+```{r ts_delay_MO_seasonality, fig.height=16, fig.width=12}
+
+data %>%
+  filter(device_name==devices[[5]]) %>%
+  group_by(scheduler) %>%
+  select(scheduler, device_name, plan_date, delay) %>%
+    plot_seasonal_diagnostics(plan_date, delay, 
+                              .title = paste("[Seasonal Diagnostics]", devices[[5]]),
+                              .interactive = interactive)
+
+```
+
+
+
+
+
+```{r ts_basic_scheduler, fig.height=16, fig.width=12, eval=FALSE}
+
+# data %>%
+#   filter(scheduler==schedulers[[2]]) %>%
+#   group_by(device_name) %>%
+#   select(device_name, plan_date, delay) %>%
+#   plot_time_series(plan_date, delay,
+#                    .facet_ncol = 1, .facet_scales = "free",
+#                    .interactive = interactive,
+#                    .title = schedulers[[2]],
+#                     .y_lab = "Delay [seconds]",
+#                    .plotly_slider = TRUE)
 ```
 
 <!-- 
@@ -942,14 +1201,14 @@ SECOND RESEARCH QUESTION
 ################################################################
 --> 
 
-### Q2: Which one of the analysed schedulers is more accurate? (Distribution of `delay`)
+### Q2: Which one of the analysed schedulers is more accurate?
 
 
 ```{r dual_scale_plots_function}
 source(here::here("R", "dual_scale_plot.R"))
 ```
 
-We assume that higher accuracy equals to lower `delay`. In Q1, we compete `delay`as `execution timestamp(i) - planned timestamp(i)`, being `i` each time steps (roughly 1 minute). Here, we compute other types of delays to make sure that the scheduler works as expected. Therefore, wecompute the following timestamps differences: 
+We assume that higher accuracy equals to lower `delay`. In Q1, we compute `delay`as `execution timestamp(i) - planned timestamp(i)`, being `i` each time step in the serie (roughly 1 minute). Here, we compute other _types_ of delays to make sure that the scheduler works as expected. Therefore, we compute the following timestamps differences: 
 
 - Consecutive planning timestamps, `planned timestamp(i-1) - planned timestamp(i)`, in order to detect wrong planned timestamp values 
 
