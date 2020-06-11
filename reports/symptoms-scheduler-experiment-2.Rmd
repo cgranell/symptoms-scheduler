@@ -1250,10 +1250,10 @@ diff_times %>%
 
 ```
 
+`delay2` shows strange values only for the `r devices[[5]]`. Below we explore its distribution per each day: `delay2` shows abnormal values during the second week (from 25 to 30) of the advance scheduler (red).
 
 
-
-```{r exec_date_diff_MO_plot, fig.height=8, fig.width=12}
+```{r exec_date_diff_MO_plot, fig.height=16, fig.width=16}
 
 diff_times %>%
   filter(device_id == names(devices)[5]) %>%
@@ -1261,7 +1261,7 @@ diff_times %>%
     # geom_point(aes(y = delay), alpha = 0.6, size = 0.5) +
     geom_point(aes(y = delay2), alpha = 0.3, size = 0.7) +
 
-    labs(title= paste0(names(devices)[5], ": exec_date[n-1] - exec_date[n]"),
+    labs(title= paste0(devices[[5]], ": delay2 per day"),
          x = "Steps [~1min]") + 
     # scale_x_datetime(breaks = scales::date_breaks("12 hours"),
     #                  labels = scales::date_format("%d-%m %H:%M", tz="CET"),
