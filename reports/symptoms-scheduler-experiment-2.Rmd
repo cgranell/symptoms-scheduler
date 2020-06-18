@@ -920,9 +920,9 @@ We assume that higher accuracy equals to lower `delay`. In Q1, we compute `delay
 - Overhead, `execution timestamp(i) - planning timestamp(i+1)`, to explore framework overhead between consecutive measurements 
 
 
-#### Consecutive planning timestamps 
+#### Consecutive planning timestamps (`delay1`)
 
-We calculate `planned timestamp(i-1) - planned timestamp(i)` to detect wrong planning timestamp values. During data collection, chances are that some planned timestamps are not correctly registered, creating duplicated timestamps, suggested by the presence of negative values of `delay`. The new variable/metric is called `plan_date_diff`. 
+We calculate `planned timestamp(i-1) - planned timestamp(i)`, to detect wrong planning timestamp values. During data collection, chances are that some planned timestamps are not correctly registered, creating duplicated timestamps, suggested by the presence of negative values of `delay`. The new variable/metric is called `delay1`. 
 
 
 ```{r plan_date_diff}
@@ -938,7 +938,11 @@ diff_times <-
          plan_date_diff = as.numeric(as.duration(interval(plan_date_lagged, plan_date)) / dseconds(1)),
          plan_date_diff = ifelse(is.na(plan_date_diff), 0, round(plan_date_diff, 3)),
          plan_date_diff_cum = cumsum(plan_date_diff))
-         
+
+# 'delay1' is the new metric
+diff_times <- 
+  diff_times %>%
+  mutate(delay1 = plan_date_diff - baseline_delay)
 ```
 
 
@@ -959,17 +963,17 @@ for (s in 1:length(schedulers)) {
     diff_times %>%
       filter(scheduler == schedulers[[s]]) %>%
       filter(device_name == devices[[d]]) %>%
-      select(device_id, device_name, plan_date_diff) -> one
+      select(device_id, device_name, delay1) -> one
     
     summary_row <- data.frame(matrix(ncol=length(col_names), nrow = 0))
     colnames(summary_row) <- col_names
     
-    mean <- mean(one$plan_date_diff, na.rm = TRUE)
-    summary_boxplot <- boxplot(one$plan_date_diff, plot = FALSE) 
+    mean <- mean(one$delay1, na.rm = TRUE)
+    summary_boxplot <- boxplot(one$delay1, plot = FALSE) 
     bottom_whisker <- summary_boxplot$stats[1,1]
     top_whisker <-  summary_boxplot$stats[5,1]
     
-    summary_row[1,] <- c(schedulers[[s]], devices[[d]], fivenum(one$plan_date_diff), mean, bottom_whisker, top_whisker)
+    summary_row[1,] <- c(schedulers[[s]], devices[[d]], fivenum(one$delay1), mean, bottom_whisker, top_whisker)
 
     summaries_diff <- rbind(summaries_diff, summary_row)
   }
@@ -1006,7 +1010,7 @@ kable(summaries_diff_table %>%
                `Max` = max),
       format = "html",
       booktabs = TRUE,
-      caption = "Table. Descriptive statistics of `plan_date_diff` (planned timestamp(i-1) - planned timestamp(i)) per scheduler/device.") %>%
+      caption = "Table. Descriptive statistics of `delay1` (planned timestamp(i-1) - planned timestamp(i)) per scheduler/device.") %>%
   kable_styling(full_width = TRUE, bootstrap_options = c("striped", "bordered", "condensed")) %>%
   collapse_rows(columns = 1:2, valign = "top")
 
@@ -1020,8 +1024,8 @@ kable(summaries_diff_table %>%
 diff_times <-
   diff_times %>%
   left_join(summaries_diff, by=c("scheduler", "device_name")) %>%
-  mutate(plan_date_diff_outlier_pos = ifelse(plan_date_diff > top_whisker, 1, 0)) %>%
-  mutate(plan_date_diff_outlier_neg = ifelse(plan_date_diff < bottom_whisker, 1, 0)) %>%
+  mutate(plan_date_diff_outlier_pos = ifelse(delay1 > top_whisker, 1, 0)) %>%
+  mutate(plan_date_diff_outlier_neg = ifelse(delay1 < bottom_whisker, 1, 0)) %>%
   mutate(plan_date_diff_outlier = ifelse((plan_date_diff_outlier_pos == 1 | plan_date_diff_outlier_neg == 1), 1, 0)) %>%
   arrange(device_name, step)
 ```
@@ -1060,7 +1064,7 @@ kable(plan_date_outliers %>%
                `# outliers negative` = n_neg),
       format = "html",
       booktabs = TRUE,
-      caption = "Table. Outliers of `plan_date_diff` per scheduler/device.") %>%
+      caption = "Table. Outliers of `delay1` per scheduler/device.") %>%
   kable_styling(full_width =TRUE, position = "left", bootstrap_options = c("striped", "bordered", "condensed"))
 
 ```
@@ -1078,16 +1082,15 @@ annotation_outliers <-
   as.data.frame()
 
 diff_times %>%
-  filter(plan_date_diff_outlier ==1, plan_date_diff < 150) %>%  #TODO: What do I do with super-outliers?
+  filter(plan_date_diff_outlier ==1, delay1 < 150) %>%  #TODO: What do I do with super-outliers?
   ggplot(aes(x = step, color=factor(device_name))) +
-    # geom_point(aes(y = delay), alpha = 0.6, size = 0.5) +
-    geom_point(aes(y = plan_date_diff), alpha = 0.3, size = 0.7) +
-    # geom_point(aes(y = exec_date_diff)) +
+    # geom_point(aes(y = delay1), alpha = 0.6, size = 0.5) +
+    geom_point(aes(y = delay1), alpha = 0.3, size = 0.7) +
     geom_label(data = annotation_outliers, 
               aes(x = Inf, y = Inf, label = n),
                hjust   = 1.5, vjust   = 1.5) +
   
-    labs(title="plan_date_diff without super-outliers (> 150 secs). Anotation denotes total number of outliers per device/scheduler",
+    labs(title="delay1 without super-outliers (> 150 secs). Anotation denotes total number of outliers per device/scheduler",
          x = "Steps [~1min]") + 
     scale_y_continuous(name="plan_date_diff [seconds]") + #, breaks=ybks_delay, limits=ylim_delay) +
     facet_grid(device_name~scheduler) +
@@ -1111,14 +1114,12 @@ diff_times %>%
 
 # 
 # diff_times %>%
-#   filter(plan_date_diff == 0) %>%
+#   filter(delay1 == 0) %>%
 #   filter(device_id == names(devices)[4] | device_id == names(devices)[3]) %>%
 #   ggplot(aes(x = plan_date, color=factor(device_name))) +
-#     # geom_point(aes(y = delay), alpha = 0.6, size = 0.5) +
-#     geom_point(aes(y = plan_date_diff), alpha = 0.3, size = 1) +
-#     # geom_point(aes(y = exec_date_diff)) +
+#     geom_point(aes(y = delay1), alpha = 0.3, size = 1) +
 #   
-#     labs(title="plan_date_diff == 0",
+#     labs(title="delay1 == 0",
 #          x = "Steps [~1min]") + 
 #     scale_y_continuous(name="diff [seconds]") + #, breaks=ybks_delay, limits=ylim_delay) +
 #     facet_grid(~device_name) +
@@ -1131,7 +1132,7 @@ diff_times %>%
 ```
 
 
-#### Consecutive execution timestamps 
+#### Consecutive execution timestamps (`delay2`)
 
 We calculate `execution timestamp(i-1) - execution timestamp(i)` which gives us whether execution times between consecutive measurements (i.e. tasks execution) are accurate, i.e., tasks are executed as expected. The new variable/metric is called `delay2` (substracting `r baseline_delay` to get values around zero).
 
@@ -1164,17 +1165,17 @@ for (s in 1:length(schedulers)) {
     diff_times %>%
       filter(scheduler == schedulers[[s]]) %>%
       filter(device_name == devices[[d]]) %>%
-      select(device_id, device_name, exec_date_diff) -> one
+      select(device_id, device_name, delay2) -> one
     
     summary_row <- data.frame(matrix(ncol=length(col_names), nrow = 0))
     colnames(summary_row) <- col_names
     
-    mean <- mean(one$exec_date_diff, na.rm = TRUE)
-    summary_boxplot <- boxplot(one$exec_date_diff, plot = FALSE) 
+    mean <- mean(one$delay2, na.rm = TRUE)
+    summary_boxplot <- boxplot(one$delay2, plot = FALSE) 
     bottom_whisker <- summary_boxplot$stats[1,1]
     top_whisker <-  summary_boxplot$stats[5,1]
     
-    summary_row[1,] <- c(schedulers[[s]], devices[[d]], fivenum(one$exec_date_diff), mean, bottom_whisker, top_whisker)
+    summary_row[1,] <- c(schedulers[[s]], devices[[d]], fivenum(one$delay2), mean, bottom_whisker, top_whisker)
 
     summaries_diff <- rbind(summaries_diff, summary_row)
   }
@@ -1213,13 +1214,67 @@ kable(summaries_diff_table %>%
                `Max` = max),
       format = "html",
       booktabs = TRUE,
-      caption = "Table. Descriptive statistics of 'execution timestamp(n-1) - execution timestamp(n)' per scheduler/device.") %>%
+      caption = "Table. Descriptive statistics of 'delay2' (execution timestamp(n-1) - execution timestamp(n)) per scheduler/device.") %>%
   kable_styling(full_width = TRUE, bootstrap_options = c("striped", "bordered", "condensed")) %>%
   collapse_rows(columns = 1:2, valign = "top")
   # row_spec(6, color = "white", background = "orange") %>%
   # row_spec(9:10, color = "white", background = "#D7261E")
 
 ```
+
+
+
+
+
+```{r exec_date_diff_outliers}
+diff_times <-
+  diff_times %>%
+  left_join(summaries_diff, by=c("scheduler", "device_name")) %>%
+  mutate(exec_date_diff_outlier_pos = ifelse(delay2 > top_whisker, 1, 0)) %>%
+  mutate(exec_date_diff_outlier_neg = ifelse(delay2 < bottom_whisker, 1, 0)) %>%
+  mutate(exec_date_diff_outlier = ifelse((exec_date_diff_outlier_pos == 1 | exec_date_diff_outlier_neg == 1), 1, 0)) %>%
+  arrange(device_name, step)
+```
+
+
+```{r exec_date_diff_outliers_table}
+exec_date_outliers <- 
+  filter(diff_times, exec_date_diff_outlier==1) %>%
+  group_by(scheduler, device_name) %>%
+  summarise(n = n()) %>%
+  arrange(device_name, scheduler)
+
+exec_date_outliers_pos <- 
+  filter(diff_times, exec_date_diff_outlier_pos==1) %>%
+  group_by(scheduler, device_name) %>%
+  summarise(n_pos = n()) %>%
+  arrange(device_name, scheduler)
+
+exec_date_outliers_neg <- 
+  filter(diff_times, exec_date_diff_outlier_neg==1) %>%
+  group_by(scheduler, device_name) %>%
+  summarise(n_neg = n()) %>%
+  arrange(device_name, scheduler)
+
+exec_date_outliers <- 
+  exec_date_outliers %>% 
+  left_join(exec_date_outliers_pos, by = c("scheduler", "device_name")) %>%
+  left_join(exec_date_outliers_neg, by = c("scheduler", "device_name"))
+  
+
+kable(exec_date_outliers %>%
+        select(`Device` = device_name, 
+               `Type scheduler` = scheduler,
+               `# outliers` = n, 
+               `# outliers positive` = n_pos,
+               `# outliers negative` = n_neg),
+      format = "html",
+      booktabs = TRUE,
+      caption = "Table. Outliers of `delay2` per scheduler/device.") %>%
+  kable_styling(full_width =TRUE, position = "left", bootstrap_options = c("striped", "bordered", "condensed"))
+
+```
+
 
 
 ```{r exec_date_diff_plot, fig.height=16, fig.width=16}
@@ -1281,9 +1336,20 @@ diff_times %>%
 
 
 
+```{r exec_date_diff_zero_plot, fig.height=5, fig.width=12}
+
+diff_times %>%
+  filter(exec_date_diff == 0) %>%  
+  ggplot() +
+  geom_bar(aes(x=device_name, fill=scheduler), stat = 'count', position = position_dodge(preserve = 'single')) +
+  theme_bw() +
+  labs(title = "exec_date_diff == 0")
+
+```
 
 
 #### Overhead between consecutive measurements 
+
 
 
 
