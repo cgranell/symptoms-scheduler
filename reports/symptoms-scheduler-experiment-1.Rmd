@@ -1,6 +1,6 @@
 ---
 title: "Symptoms - 'NativeScript Task Dispatcher' experiment (I)"
-author: "Carlos Granell, Miguel Matey, Alberto Gonzalez, Sven Casteleyn [SyMptOMS team](http://geotec.uji.es/projects/SyMptOMS/), [GEOTEC research group](http://geotec.uji.es/)"
+author: "Carlos Granell, Miguel Matey, Alberto González, Sven Casteleyn - [SyMptOMS team](http://geotec.uji.es/projects/SyMptOMS/), [GEOTEC research group](http://geotec.uji.es/)"
 date: "17/4/2020 (updated `r format(Sys.time(), '%d %B, %Y')`)"
 output: 
   html_document:

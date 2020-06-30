@@ -1,6 +1,6 @@
 ---
 title: "Symptoms - 'NativeScript Task Dispatcher' experiment (II)"
-author: "Carlos Granell, Miguel Matey, Alberto Gonzalez, Sven Casteleyn [SyMptOMS team](http://geotec.uji.es/projects/SyMptOMS/), [GEOTEC research group](http://geotec.uji.es/)"
+author: "Carlos Granell, Miguel Matey, Alberto González, Sven Casteleyn - [SyMptOMS team](http://geotec.uji.es/projects/SyMptOMS/), [GEOTEC research group](http://geotec.uji.es/)"
 date: "17/4/2020 (updated `r format(Sys.time(), '%d %B, %Y')`)"
 output: 
   html_document:
@@ -52,6 +52,8 @@ library(gridBase)
 library(gridExtra)
 # library(egg)
 # library(timetk)
+library(hrbrthemes)
+library(viridis)
 ```
 
 
@@ -799,7 +801,6 @@ outliers_neg_MO_bubblechart
 #### Advanced scheduler vs basic scheduler
 
 ```{r outliers_by_schedulers}
-#TODO: agrupar datos por scheduler, y mostrar bubble plot. 
 sel_scheduler <- schedulers[[1]]
 n_outliers_AD <- nrow(filter(data, outlier==1, scheduler ==sel_scheduler))
 n_outliers_pos_AD <- nrow(filter(data, outlier_pos==1, scheduler ==sel_scheduler))
@@ -1274,6 +1275,29 @@ kable(exec_date_outliers %>%
   kable_styling(full_width =TRUE, position = "left", bootstrap_options = c("striped", "bordered", "condensed"))
 
 ```
+
+
+
+```{r exec_date_diff_histogram, fig.height=10, fig.width=8,  warning=FALSE, message=FALSE}
+
+
+diff_times %>%
+  filter(exec_date_diff_outlier == 1, delay2 < 150) %>%
+  ggplot(aes(x = delay2, color=device_name, fill=device_name)) +
+  geom_histogram(binwidth = 4,  alpha=0.6) +
+  scale_fill_viridis(discrete=TRUE) +
+  scale_color_viridis(discrete=TRUE) +
+  facet_wrap(device_name~scheduler, ncol = 2, nrow = 5) +
+  theme_ipsum() +
+  theme(
+      legend.position="none",
+      panel.spacing = unit(0.1, "lines"),
+      strip.text.x = element_text(size = 8)) +
+  xlab("Outliers of delay2 < 150 secs") +
+  ylab("Histogram - Count")
+
+```
+
 
 
 
