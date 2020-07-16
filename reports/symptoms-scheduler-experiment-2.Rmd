@@ -1141,7 +1141,6 @@ We calculate `execution timestamp(i-1) - execution timestamp(i)` which gives us 
 
 ```{r exec_date_diff_summary, warning=FALSE, message=FALSE}
 
-
 diff_times2 <- 
   data %>%
   select(step, scheduler, device_id, device_name, delay, plan_date, exec_date, plan_day, exec_day)
@@ -1306,7 +1305,7 @@ diff_times2 %>%
 
 
 ```{r fig.height=10, fig.width=8,  warning=FALSE, message=FALSE}
-diff_times %>%
+diff_times2 %>%
   filter(exec_date_diff_outlier == 1, delay2 > 60, delay2 < 3600) %>% #150
   ggplot(aes(x = delay2, color=device_name, fill=device_name)) +
   geom_histogram(bins = 60,  alpha=0.6) + #4
