@@ -1141,8 +1141,13 @@ We calculate `execution timestamp(i-1) - execution timestamp(i)` which gives us 
 
 ```{r exec_date_diff_summary, warning=FALSE, message=FALSE}
 
-diff_times <- 
-  diff_times %>%
+
+diff_times2 <- 
+  data %>%
+  select(step, scheduler, device_id, device_name, delay, plan_date, exec_date, plan_day, exec_day)
+
+diff_times2 <- 
+  diff_times2 %>%
   group_by(scheduler, device_id) %>%
   arrange(exec_date) %>% # TODO: step
   mutate(exec_date_lagged = dplyr::lag(exec_date),
@@ -1151,8 +1156,8 @@ diff_times <-
          exec_date_diff_cum = cumsum(exec_date_diff))
 
 # 'delay2' is the new metric
-diff_times <- 
-  diff_times %>%
+diff_times2 <- 
+  diff_times2 %>%
   mutate(delay2 = exec_date_diff - baseline_delay)
 
 
@@ -1163,7 +1168,7 @@ colnames(summaries_diff) <- col_names
 for (s in 1:length(schedulers)) {
   for (d in 1:length(devices)) {
     
-    diff_times %>%
+    diff_times2 %>%
       filter(scheduler == schedulers[[s]]) %>%
       filter(device_name == devices[[d]]) %>%
       select(device_id, device_name, delay2) -> one
@@ -1228,8 +1233,8 @@ kable(summaries_diff_table %>%
 
 
 ```{r exec_date_diff_outliers}
-diff_times <-
-  diff_times %>%
+diff_times2 <-
+  diff_times2 %>%
   left_join(summaries_diff, by=c("scheduler", "device_name")) %>%
   mutate(exec_date_diff_outlier_pos = ifelse(delay2 > top_whisker, 1, 0)) %>%
   mutate(exec_date_diff_outlier_neg = ifelse(delay2 < bottom_whisker, 1, 0)) %>%
@@ -1240,19 +1245,19 @@ diff_times <-
 
 ```{r exec_date_diff_outliers_table}
 exec_date_outliers <- 
-  filter(diff_times, exec_date_diff_outlier==1) %>%
+  filter(diff_times2, exec_date_diff_outlier==1) %>%
   group_by(scheduler, device_name) %>%
   summarise(n = n()) %>%
   arrange(device_name, scheduler)
 
 exec_date_outliers_pos <- 
-  filter(diff_times, exec_date_diff_outlier_pos==1) %>%
+  filter(diff_times2, exec_date_diff_outlier_pos==1) %>%
   group_by(scheduler, device_name) %>%
   summarise(n_pos = n()) %>%
   arrange(device_name, scheduler)
 
 exec_date_outliers_neg <- 
-  filter(diff_times, exec_date_diff_outlier_neg==1) %>%
+  filter(diff_times2, exec_date_diff_outlier_neg==1) %>%
   group_by(scheduler, device_name) %>%
   summarise(n_neg = n()) %>%
   arrange(device_name, scheduler)
@@ -1281,10 +1286,11 @@ kable(exec_date_outliers %>%
 ```{r exec_date_diff_histogram, fig.height=10, fig.width=8,  warning=FALSE, message=FALSE}
 
 
-diff_times %>%
-  filter(exec_date_diff_outlier == 1, delay2 < 150) %>%
+diff_times2 %>%
+  # filter(exec_date_diff_outlier == 1, abs(delay2) < 1.5) %>% #150
+  filter(abs(delay2) < 1.5) %>% #150
   ggplot(aes(x = delay2, color=device_name, fill=device_name)) +
-  geom_histogram(binwidth = 4,  alpha=0.6) +
+  geom_histogram(binwidth = 0.01,  alpha=0.6) + #4
   scale_fill_viridis(discrete=TRUE) +
   scale_color_viridis(discrete=TRUE) +
   facet_wrap(device_name~scheduler, ncol = 2, nrow = 5) +
@@ -1293,17 +1299,34 @@ diff_times %>%
       legend.position="none",
       panel.spacing = unit(0.1, "lines"),
       strip.text.x = element_text(size = 8)) +
-  xlab("Outliers of delay2 < 150 secs") +
+  xlab("Outliers of delay2 < 5 secs") +
   ylab("Histogram - Count")
 
 ```
 
 
+```{r fig.height=10, fig.width=8,  warning=FALSE, message=FALSE}
+diff_times %>%
+  filter(exec_date_diff_outlier == 1, delay2 > 60, delay2 < 3600) %>% #150
+  ggplot(aes(x = delay2, color=device_name, fill=device_name)) +
+  geom_histogram(bins = 60,  alpha=0.6) + #4
+  scale_fill_viridis(discrete=TRUE) +
+  scale_color_viridis(discrete=TRUE) +
+  facet_wrap(device_name~scheduler, ncol = 2, nrow = 5) +
+  theme_ipsum() +
+  theme(
+      legend.position="none",
+      panel.spacing = unit(0.1, "lines"),
+      strip.text.x = element_text(size = 8)) +
+  xlab("Outliers of delay2 < 5 secs") +
+  ylab("Histogram - Count")
+```
+
 
 
 ```{r exec_date_diff_plot, fig.height=16, fig.width=16}
 
-diff_times %>%
+diff_times2 %>%
   filter(exec_date_diff < 150) %>%
   ggplot(aes(x = step, color=factor(device_name))) +
     # geom_point(aes(y = delay), alpha = 0.6, size = 0.5) +
@@ -1334,7 +1357,7 @@ diff_times %>%
 
 ```{r exec_date_diff_MO_plot, fig.height=16, fig.width=16}
 
-diff_times %>%
+diff_times2 %>%
   filter(device_id == names(devices)[5]) %>%
   ggplot(aes(x = step, color=factor(scheduler))) +
     # geom_point(aes(y = delay), alpha = 0.6, size = 0.5) +
@@ -1362,7 +1385,7 @@ diff_times %>%
 
 ```{r exec_date_diff_zero_plot, fig.height=5, fig.width=12}
 
-diff_times %>%
+diff_times2 %>%
   filter(exec_date_diff == 0) %>%  
   ggplot() +
   geom_bar(aes(x=device_name, fill=scheduler), stat = 'count', position = position_dodge(preserve = 'single')) +
