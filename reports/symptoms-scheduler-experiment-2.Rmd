@@ -1401,6 +1401,27 @@ diff_times2 %>%
 
 #### Concluding remarks (Q2)
 
+In response to the question _Which one of the two schedulers is more accurate?_, we observe the following statements based on the metric `delay1` and `delay2`. We assume that higher accuracy equals to lower delays. We compute delay in two ways 
+
+- `delay1`: Consecutive planning timestamps, i.e. `planned timestamp(i-1) - planned timestamp(i)`
+
+  - Centrality of the distribution: mean and median values are pretty similar for the advance adn basic schedulers (Table Descriptive statistics of `delay1` per scheduler/device). Again, we have to look at outliers to seek for significative differences.  
+  
+  - Number of outliers: As observed with the`delay`metric, the number of outliers in the experiments with the basic scheduler is more than double that of the experiments with the advanced scheduler. Therefore,the advanced scheduler beats the basic one in terms of number of outliers. Majority of outliers are also positive (beyond top whisker). Negative values (beyond bottom whisker) should be interpreted as wrong values due to planned timestamps mistakenly recorded during data collection.
+  
+  - Fequency of outliers:
+  
+  - Centrality of outliers:
+  
+- `delay2`: Consecutive execution timestamps, i.e. `execution timestamp(i-1) - execution timestamp(i)`
+
+  - Centrality of the distribution
+  - Number of outliers:
+  - Centrality of outliers
+
+
+
+- Basic scheduler shows delays with greater centrality measurements than advanced scheduler. 
 
 
 
