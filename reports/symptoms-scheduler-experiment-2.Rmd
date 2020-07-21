@@ -1072,6 +1072,49 @@ kable(plan_date_outliers %>%
 
 
 
+
+```{r plan_date_diff_histogram1, fig.height=10, fig.width=8,  warning=FALSE, message=FALSE}
+
+
+diff_times %>%
+  filter(plan_date_diff_outlier == 1, abs(delay1) < 2) %>% 
+  ggplot(aes(x = delay1, color=device_name, fill=device_name)) +
+  geom_histogram(binwidth = 0.01,  alpha=0.6) + #4
+  scale_fill_viridis(discrete=TRUE) +
+  scale_color_viridis(discrete=TRUE) +
+  facet_wrap(device_name~scheduler, ncol = 2, nrow = 5) +
+  theme_ipsum() +
+  theme(
+      legend.position="none",
+      panel.spacing = unit(0.1, "lines"),
+      strip.text.x = element_text(size = 8)) +
+  xlab("Outliers of delay1 < 2 secs") +
+  ylab("Histogram - Count")
+
+```
+
+
+```{r plan_date_diff_histogram2, fig.height=10, fig.width=8,  warning=FALSE, message=FALSE}
+
+
+diff_times %>%
+  filter(abs(delay1) < 2) %>%
+  ggplot(aes(x = delay1, color=device_name, fill=device_name)) +
+  geom_histogram(binwidth = 0.01,  alpha=0.6) + #4
+  scale_fill_viridis(discrete=TRUE) +
+  scale_color_viridis(discrete=TRUE) +
+  facet_wrap(device_name~scheduler, ncol = 2, nrow = 5) +
+  theme_ipsum() +
+  theme(
+      legend.position="none",
+      panel.spacing = unit(0.1, "lines"),
+      strip.text.x = element_text(size = 8)) +
+  xlab("Whole distribution of delay1 < 2 secs") +
+  ylab("Histogram - Count")
+
+```
+
+
 ```{r plan_date_diff_outliers_plot, fig.height=16, fig.width=16}
 
 # Add annotation to each plot with the number of outliers
@@ -1282,12 +1325,11 @@ kable(exec_date_outliers %>%
 
 
 
-```{r exec_date_diff_histogram, fig.height=10, fig.width=8,  warning=FALSE, message=FALSE}
+```{r exec_date_diff_histogram1, fig.height=10, fig.width=8,  warning=FALSE, message=FALSE}
 
 
 diff_times2 %>%
-  # filter(exec_date_diff_outlier == 1, abs(delay2) < 1.5) %>% #150
-  filter(abs(delay2) < 1.5) %>% #150
+  filter(exec_date_diff_outlier == 1, abs(delay2) < 2) %>%
   ggplot(aes(x = delay2, color=device_name, fill=device_name)) +
   geom_histogram(binwidth = 0.01,  alpha=0.6) + #4
   scale_fill_viridis(discrete=TRUE) +
@@ -1298,17 +1340,19 @@ diff_times2 %>%
       legend.position="none",
       panel.spacing = unit(0.1, "lines"),
       strip.text.x = element_text(size = 8)) +
-  xlab("Outliers of delay2 < 5 secs") +
+  xlab("Outliers of delay2 < 2 secs") +
   ylab("Histogram - Count")
 
 ```
 
 
-```{r fig.height=10, fig.width=8,  warning=FALSE, message=FALSE}
+```{r exec_date_diff_histogram2, fig.height=10, fig.width=8,  warning=FALSE, message=FALSE}
+
+
 diff_times2 %>%
-  filter(exec_date_diff_outlier == 1, delay2 > 60, delay2 < 3600) %>% #150
+  filter(abs(delay2) < 2) %>% #150
   ggplot(aes(x = delay2, color=device_name, fill=device_name)) +
-  geom_histogram(bins = 60,  alpha=0.6) + #4
+  geom_histogram(binwidth = 0.01,  alpha=0.6) + #4
   scale_fill_viridis(discrete=TRUE) +
   scale_color_viridis(discrete=TRUE) +
   facet_wrap(device_name~scheduler, ncol = 2, nrow = 5) +
@@ -1317,9 +1361,13 @@ diff_times2 %>%
       legend.position="none",
       panel.spacing = unit(0.1, "lines"),
       strip.text.x = element_text(size = 8)) +
-  xlab("Outliers of delay2 < 5 secs") +
+  xlab("Whole distribution of delay2 < 2 secs") +
   ylab("Histogram - Count")
+
 ```
+
+
+
 
 
 
@@ -1405,26 +1453,19 @@ In response to the question _Which one of the two schedulers is more accurate?_,
 
 - `delay1`: Consecutive planning timestamps, i.e. `planned timestamp(i-1) - planned timestamp(i)`
 
-  - Centrality of the distribution: mean and median values are pretty similar for the advance adn basic schedulers (Table Descriptive statistics of `delay1` per scheduler/device). Again, we have to look at outliers to seek for significative differences.  
+  - Centrality of the distribution: mean and (specially) median values are pretty similar for the advance adn basic schedulers (Table Descriptive statistics of `delay1` per scheduler/device). Again, we have to look at outliers to seek for significative differences.  
   
-  - Number of outliers: As observed with the`delay`metric, the number of outliers in the experiments with the basic scheduler is more than double that of the experiments with the advanced scheduler. Therefore,the advanced scheduler beats the basic one in terms of number of outliers. Majority of outliers are also positive (beyond top whisker). Negative values (beyond bottom whisker) should be interpreted as wrong values due to planned timestamps mistakenly recorded during data collection.
+  - Number of outliers: As observed with the `delay`metric, the number of outliers in the experiments with the basic scheduler outnumbers that of the experiments with the advanced scheduler. Therefore,the advanced scheduler beats the basic one in terms of number of outliers. Majority of outliers are also positive (beyond top whisker). Negative values (beyond bottom whisker) should be interpreted as wrong values due to planned timestamps mistakenly recorded during data collection.
   
-  - Fequency of outliers:
-  
-  - Centrality of outliers:
+  - Dispersion of outliers: it seems to be greater for basic scheduler (see histograms - Outliers of delay1 < 2 secs)
   
 - `delay2`: Consecutive execution timestamps, i.e. `execution timestamp(i-1) - execution timestamp(i)`
 
-  - Centrality of the distribution
-  - Number of outliers:
-  - Centrality of outliers
-
-
-
-- Basic scheduler shows delays with greater centrality measurements than advanced scheduler. 
-
-
-
+  - Centrality of the distribution: mean and (specially) median values are pretty similar for the advance adn basic schedulers (Table Descriptive statistics of `delay1` per scheduler/device). Again, we have to look at outliers to seek for significative differences.  
+  
+  - Number of outliers: As observed with the `delay` and `dealy1` metrics, the number of outliers in the experiments with the basic scheduler outnumers that of the experiments with the advanced scheduler. Therefore,the advanced scheduler beats the basic one in terms of number of outliers. Majority of outliers are also positive (beyond top whisker). Negative values (beyond bottom whisker) should be interpreted as wrong values due to planned timestamps mistakenly recorded during data collection.
+  
+  - Dispersion of outliers: it seems to be greater for basic scheduler (see histograms - Outliers of delay2 < 2 secs)
 
 
 ### Q3: Does the battery level influence timely alarm execution? (Distribution of `delay` over `battery` - without outliers)
