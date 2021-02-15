@@ -277,7 +277,7 @@ n_irq <- nrow(filter(data, outlier == 0 & whisker == 0))
 ```
 
 
-Now, we compute statistics per device only, that is, data points from basic and advance schedulers are aggregated together to calculae descriptive statistics. 
+Now, we compute statistics per device only, that is, data points from basic and advance schedulers are aggregated together to calculate descriptive statistics. 
 
 
 ```{r stats_summary_table_deviceonly, warning=FALSE, message=FALSE}
@@ -372,7 +372,7 @@ n_irq <- nrow(filter(data_perdevice, outlier == 0 & whisker == 0))
 ```{r delay_histogram_deviceonly, fig.height=10, fig.width=8,  warning=FALSE, message=FALSE}
 
 data_perdevice %>%
-  filter(abs(delay) < 2) %>% 
+  filter(abs(delay) >  2) %>% 
   group_by(scheduler, device_name) %>%
   summarise(n = n()) %>%
   arrange(scheduler, device_name) %>%
@@ -380,7 +380,7 @@ data_perdevice %>%
 
 
 data_perdevice %>%
-  filter(abs(delay) < 2, device_id %in% c("BQ", "H9")) %>% 
+  filter(outlier == 1, device_id %in% c("BQ", "H9")) %>% 
   ggplot(aes(x = delay, color=device_name, fill=device_name)) +
   geom_histogram(binwidth = 0.01,  alpha=0.6) + #4
   scale_fill_viridis(discrete=TRUE) +
@@ -391,8 +391,8 @@ data_perdevice %>%
       legend.position="none",
       panel.spacing = unit(0.1, "lines"),
       strip.text.x = element_text(size = 8)) +
-  xlab("abs(delay) < 4 seconds") +
-  ylab("Histogram - Count")
+  xlab("Abs(outliers' delay) < 5 seconds") +
+  ylab("Frequency")
 
 ```
 
