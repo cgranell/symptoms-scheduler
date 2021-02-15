@@ -176,10 +176,13 @@ __Key Variables__:
 assessment_file <- here::here("data", "data_ubicomp.rds")
 data <- readRDS(assessment_file)
 
+data_perdevice <- readRDS(assessment_file)
+
 n_observations <- nrow(data) 
 
 ```
 
+Here, we compute statistics per device and scheduler. 
 
 ```{r stats_summary_table, warning=FALSE, message=FALSE}
 
@@ -251,9 +254,7 @@ kable(stats_summaries %>%
 
 ```
 
-
-
-```{r outliers}
+```{r outliers_calculation}
 
 # devices_OK <- c("BQ" = "BQ Aquaris V",
 #                 "H9" = "Honor 9",
@@ -276,12 +277,101 @@ n_irq <- nrow(filter(data, outlier == 0 & whisker == 0))
 ```
 
 
+Now, we compute statistics per device only, that is, data points from basic and advance schedulers are aggregated together to calculae descriptive statistics. 
+
+
+```{r stats_summary_table_deviceonly, warning=FALSE, message=FALSE}
+
+# https://towardsdatascience.com/understanding-boxplots-5e2df7bcbd51
+# Understanding Boxplot. What is a outlier?
+# Min., 1st Qu., Median, Mean, 3rd Qu., Max.
+
+col_names <- c("device_name", "min", "quartile1", "median", "quartile3", "max", "mean", "bottom_whisker", "top_whisker")
+summaries_perdevice <- data.frame(matrix(ncol=length(col_names), nrow = 0))
+colnames(summaries_perdevice) <- col_names
+
+for (d in 1:length(devices)) {
+    
+    data_perdevice %>%
+      filter(device_name == devices[[d]]) %>%
+      select(device_id, device_name, delay) -> one
+    
+    summary_row <- data.frame(matrix(ncol=length(col_names), nrow = 0))
+    colnames(summary_row) <- col_names
+    
+    mean <- mean(one$delay)
+    summary_boxplot <- boxplot(one$delay, plot = FALSE) 
+    bottom_whisker <- summary_boxplot$stats[1,1]
+    top_whisker <-  summary_boxplot$stats[5,1]
+    
+    summary_row[1,] <- c(devices[[d]], fivenum(one$delay), mean, bottom_whisker, top_whisker)
+
+    summaries_perdevice <- rbind(summaries_perdevice, summary_row)
+}
+
+summaries_perdevice <- 
+  summaries_perdevice %>%
+  mutate_at(vars(c("device_name")), ~as.character(.)) %>% 
+  mutate_at(vars(-c("device_name")), ~as.numeric(.)) %>%
+  mutate_if(is.numeric, ~round(., 3))
+
+# glimpse(summaries)
+
+data_perdevice %>%
+  group_by(device_name) %>%
+  summarise(n = n())  %>%
+  inner_join(summaries_perdevice, by=c("device_name")) %>%
+  arrange(device_name) -> stats_summaries_perdevice
+
+kable(stats_summaries_perdevice %>%
+        select(`Device` = device_name,
+               `# records` = n,
+               `Min` = min,
+               `Bottom whisker`= bottom_whisker,
+               `1st Qu.` = quartile1,
+               `Median` = median,
+               `Mean` = mean,
+               `3rd Qu.` = quartile3,
+               `Top whisker`= top_whisker,
+               `Max` = max),
+      format = "html",
+      booktabs = TRUE,
+      caption = "Table. Descriptive statistics of data distribution and centrality per device only.") %>%
+  kable_styling(full_width = TRUE, bootstrap_options = c("striped", "bordered", "condensed")) 
+  # row_spec(7:8, color = "white", background = "#D7261E")
+
+```
 
 
 
-```{r delay_histogram, fig.height=10, fig.width=8,  warning=FALSE, message=FALSE}
 
-data %>%
+```{r outliers_calculation_deviceonly}
+
+# devices_OK <- c("BQ" = "BQ Aquaris V",
+#                 "H9" = "Honor 9",
+#                 "MO" = "Motorola Moto G")
+
+data_perdevice %>% 
+  left_join(summaries_perdevice, by=c("device_name")) %>%
+  mutate(outlier_pos = ifelse(delay > top_whisker, 1, 0)) %>%
+  mutate(outlier_neg = ifelse(delay < bottom_whisker, 1, 0)) %>%
+  mutate(outlier = ifelse((outlier_pos == 1 | outlier_neg == 1), 1, 0)) %>%
+  mutate(whisker = ifelse((delay > bottom_whisker & delay < quartile1) | (delay > quartile3 & delay < top_whisker), 1, 0)) %>%
+  select(-min,-bottom_whisker, -quartile1, -mean, -median, -quartile3, -top_whisker, -max) %>%
+  arrange(device_id, plan_date) -> data_perdevice
+
+
+n_outliers <- nrow(filter(data_perdevice, outlier == 1))
+n_whisker <- nrow(filter(data_perdevice, whisker == 1))
+n_irq <- nrow(filter(data_perdevice, outlier == 0 & whisker == 0))
+
+```
+
+
+
+```{r delay_histogram_deviceonly, fig.height=10, fig.width=8,  warning=FALSE, message=FALSE}
+
+data_perdevice %>%
   filter(abs(delay) < 2) %>% 
   group_by(scheduler, device_name) %>%
   summarise(n = n()) %>%
@@ -289,8 +379,7 @@ data %>%
   kable()
 
 
-
-data %>%
+data_perdevice %>%
   filter(abs(delay) < 2, device_id %in% c("BQ", "H9")) %>% 
   ggplot(aes(x = delay, color=device_name, fill=device_name)) +
   geom_histogram(binwidth = 0.01,  alpha=0.6) + #4
@@ -373,6 +462,72 @@ ggplot(outliers %>% filter(device_name %in% as.vector(devices))) +
   labs(title = "Absolute number of outliers per device")
 
 ```
+
+
+
+Now, statistics computed by device only
+
+
+
+```{r outliers_table_deviceonly}
+outliers <- 
+  filter(data_perdevice, outlier==1) %>%
+  group_by(scheduler, device_name) %>%
+  summarise(n = n()) %>%
+  arrange(device_name, scheduler)
+
+outliers_pos <- 
+  filter(data_perdevice, outlier_pos==1) %>%
+  group_by(scheduler, device_name) %>%
+  summarise(n_pos = n()) %>%
+  arrange(device_name, scheduler)
+
+outliers_neg <- 
+  filter(data_perdevice, outlier_neg==1) %>%
+  group_by(scheduler, device_name) %>%
+  summarise(n_neg = n()) %>%
+  arrange(device_name, scheduler)
+
+outliers <- 
+  outliers %>% 
+  left_join(outliers_pos, by = c("scheduler", "device_name")) %>%
+  left_join(outliers_neg, by = c("scheduler", "device_name"))
+  
+
+kable(outliers %>%
+        select(`Device` = device_name, 
+               `Type scheduler` = scheduler,
+               `# outliers` = n, 
+               `# outliers positive` = n_pos,
+               `# outliers negative` = n_neg),
+      format = "html",
+      booktabs = TRUE,
+      caption = "Table. Outliers per device.") %>%
+  kable_styling(full_width = TRUE, position = "left", bootstrap_options = c("striped", "bordered", "condensed")) 
+```
+
+
+```{r outliers_table_totals_deviceonly}
+
+
+outliers %>%
+  group_by(scheduler) %>%
+  summarise(n_total = sum(n)) %>%
+  kable() %>%
+  kable_styling("striped")
+
+```
+
+```{r outliers_plot_deviceonly}
+ggplot(outliers %>% filter(device_name %in% as.vector(devices))) +
+  geom_bar(aes(x=device_name, y=n, fill=scheduler), stat = 'identity', position = position_dodge(preserve = 'single')) +
+  theme_bw() +
+  labs(title = "Absolute number of outliers per device")
+
+```
+
+
+
 
 
 #### Centrality statistics of  outliers
