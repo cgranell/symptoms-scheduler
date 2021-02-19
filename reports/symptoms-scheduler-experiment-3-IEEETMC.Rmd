@@ -109,7 +109,7 @@ for (f in 1:length(file_names)) {
            device_id = device_id,
            device_name = device_name,
            device_desc = device_desc,
-           device_os = device_os) 
+           device_os = factor(device_os)) 
   
   data_merged <- rbind(data_merged, data_temp)
 }       
@@ -179,13 +179,61 @@ __Key Variables__:
   - `scheduler`: scheduler type
 
 
-
-
 ### Missingness of data
 
+```{r missigness_prep}
+
+data %>%
+  dplyr::group_by(device_id, scheduler, device_os) %>%
+  dplyr::arrange(step) %>%
+  dplyr::summarise(n_real_exec = max(step),
+                min_plan_date = min(plan_date),
+                max_plan_date = max(plan_date),
+                n_plan_exec = round(as.numeric(max_plan_date - min_plan_date, units="mins"))) %>%
+  dplyr::select(device_id, scheduler, device_os, n_plan_exec, 
+                n_real_exec, min_plan_date, max_plan_date) -> missingness
 
 
+n_plan_exec_a1ba <- 20264
+n_plan_exec_nv_ba <- 20264
+```
 
+But, A1-BA and NV-BA did not end the 2 weeks. The expected number of executions are
+
+- A1-BA: `r n_plan_exec_a1ba` instead of `filter(missingness, device_id =='A1' & scheduler=='Basic') %>% select(n_plan_exec)`.
+
+- NV-BA: `r n_plan_exec_a1ba` instead of `filter(missingness, device_id =='NV' & scheduler=='Basic') %>% select(n_plan_exec)`.
+
+
+```{r missigness_update}
+missingness[2,c("n_plan_exec")] <- n_plan_exec_a1ba
+missingness[8,c("n_plan_exec")] <- n_plan_exec_nv_ba
+```
+
+```{r missingness_percent}
+
+missingness <-
+  missingness %>%
+  dplyr::mutate(percent = scales::percent(1 - (n_real_exec / n_plan_exec), accuracy = 0.01))
+                
+```
+
+```{r missingness_table}
+missingness$device_os <- forcats::fct_relevel(missingness$device_os, c("7.0", "8.1", "9.0"))
+
+knitr::kable(missingness %>%
+               select(`ID` = device_id,
+                      `Scheduler` = scheduler,
+                      `OS` = device_os,
+                      `# plan exec` = n_plan_exec,
+                      `# real exec` = n_real_exec,
+                      `% missingness` = percent),
+             format = "html",
+             booktabs = TRUE,
+             caption = "MIssigness of scans per device and scheduler.") %>%
+  kableExtra::kable_styling(full_width = TRUE, bootstrap_options = c("striped", "bordered", "condensed"))
+
+```
 
 ### Summary statistics
 
