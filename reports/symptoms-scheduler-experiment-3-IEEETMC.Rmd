@@ -1,7 +1,7 @@
 ---
-title: "Symptoms - 'NativeScript Task Dispatcher' experiment (II)"
+title: "Symptoms - 'NativeScript Task Dispatcher' - IEEE TMC"
 author: "Carlos Granell, Miguel Matey, Alberto González, Sven Casteleyn - [SyMptOMS team](http://geotec.uji.es/projects/SyMptOMS/), [GEOTEC research group](http://geotec.uji.es/)"
-date: "17/4/2020 (updated `r format(Sys.time(), '%d %B, %Y')`)"
+date: "19/2/2021 (updated `r format(Sys.time(), '%d %B, %Y')`)"
 output: 
   html_document:
     df_print: paged
@@ -22,7 +22,6 @@ Required libraries and runtime environment description are as follows.
 library(tidyverse)
 library(kableExtra)
 library(here)
-# library(googledrive)
 library(lubridate)
 library(stringr)
 library(scales)
@@ -59,10 +58,15 @@ Raw data files are cleaned and merged together into a single file stored in the 
 schedulers <- c("AD" = "Advanced", 
                 "BA" = "Basic")
 
-devices <- c("BQ" = "BQ Aquaris V",
-             "NV" = "Nvidia Shield Tablet",
+devices <- c("NV" = "Nvidia Shield Tablet (Gen 1)",
+             "BQ" = "BQ Aquaris V Plus",
              "A1" = "Xiaomi Mi A1",
-             "H9" = "Honor 9")
+             "H9" = "Honor 9 (STF-L09)")
+
+os <- c("NV" = "7.0",
+        "BQ" = "8.1",
+        "A1" = "9.0",
+        "H9" = "9.0")
 
 baseline_delay <- 60
 ```
@@ -88,6 +92,7 @@ for (f in 1:length(file_names)) {
   device_id <- parts[2]
   device_name <- devices[[device_id]]
   device_desc <- paste0(scheduler_name, " - ", device_name)
+  device_os <- os[[device_id]]
   
   data_temp <- read_csv(file_paths[f], col_names = TRUE, 
                         cols(
@@ -103,7 +108,8 @@ for (f in 1:length(file_names)) {
     mutate(scheduler = scheduler_name,
            device_id = device_id,
            device_name = device_name,
-           device_desc = device_desc) 
+           device_desc = device_desc,
+           device_os = device_os) 
   
   data_merged <- rbind(data_merged, data_temp)
 }       
@@ -111,76 +117,77 @@ for (f in 1:length(file_names)) {
 
 data_merged <- 
   data_merged %>%
+  select(-task, -battery) %>%
   mutate(exec_date = as_datetime(exec_timestamp/1000, tz="Europe/Madrid"),
-         plan_date = as_datetime(planning_timestamp/1000, tz="Europe/Madrid"),
-         plan_minute = lubridate::minute(plan_date),
-         plan_hour = lubridate::hour(plan_date),
-         plan_day = lubridate::day(plan_date),
-         plan_month = lubridate::month(plan_date),
-         exec_minute = lubridate::minute(exec_date),
-         exec_hour = lubridate::hour(exec_date),
-         exec_day = lubridate::day(exec_date),
-         exec_month = lubridate::month(exec_date),
-         time_period = ifelse(between(plan_hour,0, 7), "nighttime", "daytime"))
+         plan_date = as_datetime(planning_timestamp/1000, tz="Europe/Madrid"))
+         # plan_minute = lubridate::minute(plan_date),
+         # plan_hour = lubridate::hour(plan_date),
+         # plan_day = lubridate::day(plan_date),
+         # plan_month = lubridate::month(plan_date),
+         # exec_minute = lubridate::minute(exec_date),
+         # exec_hour = lubridate::hour(exec_date),
+         # exec_day = lubridate::day(exec_date),
+         # exec_month = lubridate::month(exec_date),
+         # time_period = ifelse(between(plan_hour,0, 7), "nighttime", "daytime"))
 
 
 # Delay units: seconds
 data_complete <-
   data_merged %>%
-  group_by(device_id) %>%
-  arrange(plan_date) %>%
+  group_by(device_id, scheduler) %>%
+  arrange(exec_date) %>%
   mutate(step = row_number(),
-         delay = (as.duration(interval(plan_date, exec_date)) - baseline_delay) / dseconds(1))
+         diff = exec_date - dplyr::lag(exec_date),
+         diff_secs = as.numeric(diff, units = "secs"), 
+         delay = diff_secs - baseline_delay)
+      
 
-data_path <- here::here("data", "data_ubicomp.csv")
+
+data_path <- here::here("data", "data_ieeetms.csv")
 write_csv(data_complete, data_path)
-data_path <- here::here("data", "data_ubicomp.rds")
+data_path <- here::here("data", "data_ieeetms.rds")
 saveRDS(data_complete, data_path)
-
-#TODO: shiny app is deprecated
-# data_path <- here::here("webapp","data", "data.csv")
-# write_csv(data_complete, data_path)
-# data_path <- here::here("webapp","data", "data.rds")
-# saveRDS(data_complete, data_path)
 
 ```
 
-__Key Variables__:
+## Analysis
 
-- quantitative (interval)
-
-  - `plan_date` (_datetime_): task planning time.
-  - `exec_date` (_datetime_): task execution time.  
-
-- quantitative (ratio)
-
-  - `delay` (_numeric_): execution delay in seconds ((`exec_date` - `plan_date`) - `r baseline_delay`).
-
-- categorital (ordinal)
-
-  - `battery`(_numeric_): battery level
-
-- categorical (nominal)
-
-  - `device_id`/`device_name`: device identifier/name
-  - `exp_id`: experiment identifier
-  - `scheduler`: scheduler type
-  
-
-## Exploratory analysis
-
-
-### Summary statistics
 
 ```{r load_assessdata, warning=FALSE}
-assessment_file <- here::here("data", "data_ubicomp.rds")
+assessment_file <- here::here("data", "data_ieeetms.rds")
 data <- readRDS(assessment_file)
-
-data_perdevice <- readRDS(assessment_file)
 
 n_observations <- nrow(data) 
 
 ```
+__Key Variables__:
+
+- quantitative (interval)
+  - `plan_date` (`class(data_complete$plan_date)`): task planning time.
+  - `exec_date` (`class(data_complete$exec_date)`): task execution time.  
+  - `step`: relative position 
+
+- quantitative (ratio)
+  - `diff` (_`class(data_complete$diff)`_): difference in seconds between the current and previous execution times.
+  - `diff_secs` (`class(data_complete$diff_secs)`): numeric value of `diff`.
+  - `delay` (`class(data_complete$delay)`): normalised execution delay in seconds (`diff_secs` - `r baseline_delay`).
+
+- categorical (nominal)
+  - `device_id`: device identifier
+  - `device_name`: device name
+  - `device_os`: Android OS version
+  - `scheduler`: scheduler type
+
+
+
+
+### Missingness of data
+
+
+
+
+
+### Summary statistics
 
 Here, we compute statistics per device and scheduler. 
 
@@ -380,7 +387,7 @@ data_perdevice %>%
 
 
 data_perdevice %>%
-  filter(outlier == 1, device_id %in% c("BQ", "H9")) %>% 
+  filter(device_id %in% c("BQ", "H9")) %>% 
   ggplot(aes(x = delay, color=device_name, fill=device_name)) +
   geom_histogram(binwidth = 0.01,  alpha=0.6) + #4
   scale_fill_viridis(discrete=TRUE) +
