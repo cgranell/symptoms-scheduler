@@ -49,7 +49,7 @@ files <- tibble(
 )
 ```
 
-## Data preparation
+# Data preparation
 
 Raw data files are cleaned and merged together into a single file stored in the folder `data`. New fields such as dates breakdown are computed too. 
 
@@ -150,7 +150,7 @@ saveRDS(data_complete, data_path)
 
 ```
 
-## Analysis
+# Analysis
 
 
 ```{r load_assessdata, warning=FALSE}
@@ -179,7 +179,12 @@ __Key Variables__:
   - `scheduler`: scheduler type
 
 
-### Missingness of data
+## Experiment 1
+
+### Setup
+
+
+### Missingness of data 
 
 ```{r missigness_prep}
 
@@ -225,15 +230,82 @@ knitr::kable(missingness %>%
                select(`ID` = device_id,
                       `Scheduler` = scheduler,
                       `OS` = device_os,
-                      `# plan exec` = n_plan_exec,
-                      `# real exec` = n_real_exec,
+                      `# planned executions` = n_plan_exec,
+                      `# real executions` = n_real_exec,
                       `% missingness` = percent),
              format = "html",
              booktabs = TRUE,
-             caption = "MIssigness of scans per device and scheduler.") %>%
+             caption = "Missingness of data scans per device and scheduler.") %>%
   kableExtra::kable_styling(full_width = TRUE, bootstrap_options = c("striped", "bordered", "condensed"))
 
 ```
+
+
+
+
+### Performance
+
+```{r}
+
+limit_secs <- 10
+data %>%
+  dplyr::filter(abs(delay) >= limit_secs) %>%
+  dplyr::select(scheduler, device_id, device_name, device_os, delay) -> outliers
+
+```
+
+We discard `r nrow(outliers)` out of `r n_observations` observations whose abs(delay) >= `r limit_secs` seconds.
+
+```{r delay_dataout}
+
+data %>%
+  dplyr::filter(abs(delay) < limit_secs) %>%
+  dplyr::select(scheduler, device_id, device_name, device_os, delay) -> performance
+```
+
+
+
+```{r histogram fig.height=8, fig.width=10}
+
+devices_ordered <- c("NV", "BQ", "A1", "H9") 
+missingness_basic <- missingness %>% filter(scheduler == "Basic")
+missingness_advanced <- missingness %>% filter(scheduler == "Advanced")
+                     
+  
+performance %>%
+  ggplot(aes(y = delay, x=device_id, color=scheduler)) +
+  # scale_y_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
+  #             labels = scales::trans_format("log10", scales::math_format(10^.x))) +
+  geom_boxplot(fill="white") +
+  guides(color=FALSE) +
+  scale_x_discrete(limits=devices_ordered) +
+  scale_color_brewer(palette = "Dark2") +
+  # facet_wrap(scheduler~device_id, ncol = 4, nrow = 2) +
+  labs(title="", x ="Devices", y="Delay [seconds]") +
+  geom_text(data = missingness_basic, aes(x = device_id, y = 10, label = percent), 
+            nudge_y= 0.5,nudge_x = 0.2) +
+  geom_text(data = missingness_advanced, aes(x = device_id, y = 10, label = percent), 
+            nudge_y= 0.5,nudge_x = -0.2) +
+  theme_minimal() -> p
+
+p
+# p + ggplot2::annotation_logticks(sides = "l")
+#   # theme(
+#   #     legend.position="none",
+#   #     panel.spacing = unit(0.1, "lines"),
+#   #     strip.text.x = element_text(size = 8)) +
+#   xlab("Abs(outliers' delay) < 5 seconds") +
+#   ylab("Frequency")
+
+
+```
+
+
+
+
+
+
+
 
 ### Summary statistics
 
