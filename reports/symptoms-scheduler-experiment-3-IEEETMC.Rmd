@@ -28,10 +28,8 @@ library(scales)
 library(grid)
 library(gridBase)
 library(gridExtra)
-# library(egg)
-# library(timetk)
-library(hrbrthemes)
-library(viridis)
+# library(hrbrthemes)
+# library(viridis)
 ```
 
 
@@ -265,11 +263,16 @@ data %>%
 
 
 
-```{r histogram fig.height=8, fig.width=10}
+```{r histogram, fig.height=5, fig.width=7, dpi=300}
 
 devices_ordered <- c("NV", "BQ", "A1", "H9") 
 missingness_basic <- missingness %>% filter(scheduler == "Basic")
 missingness_advanced <- missingness %>% filter(scheduler == "Advanced")
+devices_os <- 
+  missingness %>% 
+  filter(scheduler == "Advanced") %>% 
+  mutate(device_os_lbl = paste("Android", device_os)) %>%
+  select(device_id, device_os_lbl)
                      
   
 performance %>%
@@ -277,18 +280,26 @@ performance %>%
   # scale_y_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
   #             labels = scales::trans_format("log10", scales::math_format(10^.x))) +
   geom_boxplot(fill="white") +
+  # guides(color=guide_legend(ncol=1)) +
   guides(color=FALSE) +
+  # theme(legend.position = "none") +
   scale_x_discrete(limits=devices_ordered) +
-  scale_color_brewer(palette = "Dark2") +
-  # facet_wrap(scheduler~device_id, ncol = 4, nrow = 2) +
+  # scale_color_brewer(palette = "Dark2") +
+  scale_color_grey(start = 0.1, end = 0.5) +
   labs(title="", x ="Devices", y="Delay [seconds]") +
-  geom_text(data = missingness_basic, aes(x = device_id, y = 10, label = percent), 
-            nudge_y= 0.5,nudge_x = 0.2) +
-  geom_text(data = missingness_advanced, aes(x = device_id, y = 10, label = percent), 
-            nudge_y= 0.5,nudge_x = -0.2) +
+  geom_label(data = missingness_basic, aes(x = device_id, y = 10, label = percent), 
+            size=4, nudge_y= 0.5,nudge_x = 0.2) +
+  geom_label(data = missingness_advanced, aes(x = device_id, y = 10, label = percent), 
+            size=4, nudge_y= 0.5,nudge_x = -0.2) +
+  geom_label(data = devices_os, aes(x = device_id, y = -10, label = device_os_lbl), 
+            color="black", size=3, nudge_y= 0.5,nudge_x = 0) +
   theme_minimal() -> p
 
 p
+
+ggplot2::ggsave(plot = p, filename = here::here("figs", "fig_boxplot.png"), 
+               width = 7, height = 5, dpi = 300)
+
 # p + ggplot2::annotation_logticks(sides = "l")
 #   # theme(
 #   #     legend.position="none",
@@ -299,10 +310,6 @@ p
 
 
 ```
-
-
-
-
 
 
 
