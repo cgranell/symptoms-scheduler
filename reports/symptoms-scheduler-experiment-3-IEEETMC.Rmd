@@ -201,7 +201,7 @@ n_plan_exec_a1ba <- 20264
 n_plan_exec_nvba <- 20264
 ```
 
-But, *A1 with Ad-hoc* and *NV with Ad-hoc* did **not** end the experiment. The expected number of executions are
+But, *A1 with Ad-hoc* and *NV with Ad-hoc* did **not** end the experiment. The expected number of executions were
 
 - A1: `r n_plan_exec_a1ba` instead of `r filter(missingness, device_id =='A1' & scheduler=='Ad-hoc') %>% select(n_plan_exec) %>% .$n_plan_exec`.
 
