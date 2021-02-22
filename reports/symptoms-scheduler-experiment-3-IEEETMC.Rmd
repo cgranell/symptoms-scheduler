@@ -52,8 +52,8 @@ Raw data files are cleaned and merged together into a single file stored in the 
 
 ```{r merge_datafiles_defs}
 
-schedulers <- c("AD" = "Advanced", 
-                "BA" = "Basic")
+schedulers <- c("AD" = "NativeScript", 
+                "BA" = "Ad-hoc")
 
 devices <- c("NV" = "Nvidia Shield Tablet (Gen 1)",
              "BQ" = "BQ Aquaris V Plus",
@@ -198,19 +198,19 @@ data %>%
 
 
 n_plan_exec_a1ba <- 20264
-n_plan_exec_nv_ba <- 20264
+n_plan_exec_nvba <- 20264
 ```
 
-But, A1-BA and NV-BA did **not** end the experiment. The expected number of executions are
+But, *A1 with Ad-hoc* and *NV with Ad-hoc* did **not** end the experiment. The expected number of executions are
 
-- A1-BA: `r n_plan_exec_a1ba` instead of `r filter(missingness, device_id =='A1' & scheduler=='Basic') %>% select(n_plan_exec)`.
+- A1: `r n_plan_exec_a1ba` instead of `r filter(missingness, device_id =='A1' & scheduler=='Ad-hoc') %>% select(n_plan_exec) %>% .$n_plan_exec`.
 
-- NV-BA: `r n_plan_exec_a1ba` instead of `r filter(missingness, device_id =='NV' & scheduler=='Basic') %>% select(n_plan_exec)`.
+- NV: `r n_plan_exec_nvba` instead of `r filter(missingness, device_id =='NV' & scheduler=='Ad-hoc') %>% select(n_plan_exec) %>% .$n_plan_exec`.
 
 
 ```{r missigness_update}
-missingness[2,c("n_plan_exec")] <- n_plan_exec_a1ba
-missingness[8,c("n_plan_exec")] <- n_plan_exec_nv_ba
+missingness[1,c("n_plan_exec")] <- n_plan_exec_a1ba
+missingness[7,c("n_plan_exec")] <- n_plan_exec_nvba
 ```
 
 ```{r missingness_percent}
@@ -265,11 +265,11 @@ data %>%
 ```{r delay_boxplot, fig.height=5, fig.width=7, dpi=300}
 
 devices_ordered <- c("NV", "BQ", "A1", "H9") 
-missingness_basic <- missingness %>% filter(scheduler == "Basic")
-missingness_advanced <- missingness %>% filter(scheduler == "Advanced")
+missingness_basic <- missingness %>% filter(scheduler == "Ad-hoc")
+missingness_advanced <- missingness %>% filter(scheduler == "NativeScript")
 devices_os <- 
   missingness %>% 
-  dplyr::filter(scheduler == "Advanced") %>% 
+  dplyr::filter(scheduler == "NativeScript") %>% 
   dplyr::mutate(device_os_lbl = paste("Android", device_os)) %>%
   dplyr::select(device_id, device_os_lbl)
 
@@ -287,12 +287,13 @@ performance %>%
   # scale_color_brewer(palette = "Paired") +
   # scale_color_grey(start = 0, end = 0.5) +
   
-  geom_label(data = missingness_basic, aes(x = device_id, y = 10, label = percent), 
-            color="#D95F02", 
+  geom_label(data = missingness_advanced, aes(x = device_id, y = 10, label = percent),
+            color="#D95F02",
             size=4, nudge_y= 0.5,nudge_x = 0.2) +
-  geom_label(data = missingness_advanced, aes(x = device_id, y = 10, label = percent), 
+  geom_label(data = missingness_basic, aes(x = device_id, y = 10, label = percent),
             color="#1B9E77", 
             size=4, nudge_y= 0.5,nudge_x = -0.2) +
+  
   geom_label(data = devices_os, aes(x = device_id, y = -10, label = device_os_lbl), 
             color="grey30", size=3, nudge_y= 0.5,nudge_x = 0) +
   
