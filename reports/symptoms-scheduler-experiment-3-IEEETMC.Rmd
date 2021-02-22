@@ -279,7 +279,7 @@ devices_os <-
   
 performance %>%
   ggplot2::ggplot(aes(y = delay, x=device_id, color=scheduler)) +
-  geom_boxplot(fill="white") +
+  geom_boxplot(fill="white", outlier.fill = "white", outlier.alpha = 0.2) +
   
   scale_x_discrete(limits=devices_ordered) +
   scale_y_continuous(breaks=seq(-10,10,2)) +
