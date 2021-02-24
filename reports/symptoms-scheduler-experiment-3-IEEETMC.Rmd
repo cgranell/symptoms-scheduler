@@ -217,7 +217,8 @@ missingness[7,c("n_plan_exec")] <- n_plan_exec_nvba
 
 missingness <-
   missingness %>%
-  dplyr::mutate(percent = scales::percent(1 - (n_real_exec / n_plan_exec), accuracy = 0.01))
+  dplyr::mutate(percent = (1 - (n_real_exec / n_plan_exec)),
+                percent_lbl = scales::percent(percent, accuracy = 0.01))
                 
 ```
 
@@ -230,12 +231,26 @@ knitr::kable(missingness %>%
                       `OS` = device_os,
                       `# planned executions` = n_plan_exec,
                       `# real executions` = n_real_exec,
-                      `% missingness` = percent),
+                      `% missingness` = percent_lbl),
              format = "html",
              booktabs = TRUE,
              caption = "Missingness of data scans per device and scheduler.") %>%
   kableExtra::kable_styling(full_width = TRUE, bootstrap_options = c("striped", "bordered", "condensed"))
 
+```
+
+```{r missingness_means}
+
+missingness_means <- 
+  missingness %>% 
+  dplyr::group_by(scheduler) %>% 
+  dplyr::summarise(mean = mean(percent)) %>%
+  dplyr::mutate(mean_lbl = scales::percent(mean, accuracy = 0.1))
+
+knitr::kable(missingness_means, 
+             format = "html",
+             booktabs = TRUE,
+             caption = "Average Missingness of data per type of scheduler.")
 ```
 
 
